@@ -9,6 +9,7 @@ mod camera;
 mod edge;
 mod ncube;
 mod vec;
+mod mat;
 
 fn main() {
     App::new()
