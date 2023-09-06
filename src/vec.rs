@@ -55,11 +55,15 @@ pub trait MathOps
 where
     Self: Sized,
 {
+    // Computes the dot product between 2 vectors
     fn dot(&self, b: &Self) -> f32;
+    // Computes the hadamard product between 2 vectors
     fn hadamard(&self, b: &Self) -> Self;
     /// Checks how many dimensions are shared across a group of `points` (equal in value)
     /// Useful for checking whether the points lie within an n dimensional slice.
-    fn shared_dimensions(points: &[&Self]) -> usize;
+    fn shared_dimensions(points: &[&Self]) -> Vec<usize>;
+    /// Computes the distance between 2 vectors
+    fn distance(&self, b: &Self) -> f32;
 }
 
 impl MathOps for Vec<f32> {
@@ -75,14 +79,24 @@ impl MathOps for Vec<f32> {
         (0..len).map(|d| self[d] * b[d]).collect()
     }
 
-    fn shared_dimensions(points: &[&Self]) -> usize {
-        let mut common_d = 0;
+    fn shared_dimensions(points: &[&Self]) -> Vec<usize> {
+        let mut common_d = Vec::new();
         for d in 0..points[0].len() {
             if points.iter().all(|p| p[d] == points[0][d]) {
-                common_d += 1;
+                common_d.push(d);
             }
         }
         common_d
+    }
+
+    fn distance(&self, b: &Self) -> f32 {
+        let d = self.len();
+        assert_eq!(d, b.len());
+        self.iter()
+            .enumerate()
+            .map(|(i, x)| (b[i] - x).powi(2))
+            .sum::<f32>()
+            .sqrt()
     }
 }
 

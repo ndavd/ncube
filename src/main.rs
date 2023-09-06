@@ -5,11 +5,12 @@ use bevy::pbr::NotShadowReceiver;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
 use bevy::utils::Duration;
+use bevy_egui::EguiPlugin;
 mod camera;
 mod edge;
+mod mat;
 mod ncube;
 mod vec;
-mod mat;
 
 fn main() {
     App::new()
@@ -20,9 +21,10 @@ fn main() {
                 ..default()
             }),
             camera::CameraPlugin,
+            EguiPlugin,
         ))
         .init_resource::<NCube>()
-        .add_systems(Startup, (spawn_light, spawn_tesseract))
+        .add_systems(Startup, (spawn_light, spawn_hypercube))
         .add_systems(Update, update_face_directions)
         .run();
 }
@@ -49,34 +51,31 @@ fn spawn_light(mut commands: Commands) {
 }
 
 #[derive(Resource)]
-pub struct NCube(ncube::NCube, Vec<Vec3>);
+pub struct NCube {
+    settings: ncube::NCube,
+    vertices_3d: Vec<Vec3>,
+}
 impl std::default::Default for NCube {
     fn default() -> Self {
-        let ncube = ncube::NCube::new(3, 0.5);
-        let vertices_3d = Vec::with_capacity(ncube.face_count(0));
-        Self(ncube, vertices_3d)
+        let ncube = ncube::NCube::new(4, 1.0);
+        Self {
+            vertices_3d: ncube.perspective_project_vertices(),
+            settings: ncube,
+        }
     }
 }
 
 #[derive(Component)]
 struct Face;
 
-fn spawn_tesseract(
+fn spawn_hypercube(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     ncube: Res<NCube>,
 ) {
-    let vertices_as_vec3 = ncube
-        .0
-        .vertices
-        .0
-        .iter()
-        .map(|pos| Vec3::new(pos[0], pos[1], pos[2]))
-        .collect::<Vec<_>>();
-
     let mesh = shape::Cube::default();
-    for (i, j) in &ncube.0.edges.0 {
+    for (i, j) in &ncube.settings.edges.0 {
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(mesh.into()).into(),
@@ -84,24 +83,28 @@ fn spawn_tesseract(
                     base_color: Color::CYAN,
                     ..default()
                 }),
-                transform: edge::Edge::transform(0.01, vertices_as_vec3[*i], vertices_as_vec3[*j]),
+                transform: edge::Edge::transform(
+                    0.01,
+                    ncube.vertices_3d[*i],
+                    ncube.vertices_3d[*j],
+                ),
                 ..default()
             },
             NotShadowReceiver,
         ));
     }
 
-    for (i, j, k) in &ncube.0.faces.0 {
+    for (i, j, k) in &ncube.settings.faces.0 {
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![
-                vertices_as_vec3[*i],
-                vertices_as_vec3[*j],
-                vertices_as_vec3[*k],
+                ncube.vertices_3d[*i],
+                ncube.vertices_3d[*j],
+                ncube.vertices_3d[*k],
             ],
         );
-        let normal = vertices_as_vec3[*i].normal(&vertices_as_vec3[*j], &vertices_as_vec3[*k]);
+        let normal = ncube.vertices_3d[*i].normal(&ncube.vertices_3d[*j], &ncube.vertices_3d[*k]);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![normal; 3]);
         commands.spawn((
             MaterialMeshBundle {
