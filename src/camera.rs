@@ -29,13 +29,13 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn update_camera(
-    mut query_camera_transform: Query<&mut Transform, With<Camera>>,
+    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
     mut primary_window_query: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    let mut camera_transform = query_camera_transform.get_single_mut().unwrap();
+    let mut camera_transform = q_camera_transform.get_single_mut().unwrap();
     let mut window = primary_window_query.get_single_mut().unwrap();
 
     if !mouse_button_input.pressed(MouseButton::Right) {

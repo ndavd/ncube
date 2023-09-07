@@ -184,7 +184,7 @@ impl NCube {
         NFaces(faces)
     }
 
-    pub fn rotate(&mut self, plane: [usize; 2], theta_rads: f32) -> &Self {
+    pub fn rotate(&mut self, plane: [usize; 2], theta_rads: f32) -> &mut Self {
         for i in 0..self.vertices.0.len() {
             self.vertices.0[i] = Mat::rotation(self.dimensions, self.dimensions, plane, theta_rads)
                 * self.vertices.0[i].clone();

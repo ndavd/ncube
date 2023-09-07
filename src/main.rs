@@ -1,10 +1,8 @@
 use crate::vec::TriangleNormal;
-use bevy::asset::ChangeWatcher;
 use bevy::pbr::AlphaMode;
 use bevy::pbr::NotShadowReceiver;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
-use bevy::utils::Duration;
 use bevy_egui::EguiPlugin;
 mod camera;
 mod edge;
@@ -14,18 +12,13 @@ mod vec;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins.set(AssetPlugin {
-                // TODO: REMOVE AFTER IS WORKING
-                watch_for_changes: ChangeWatcher::with_delay(Duration::from_secs(2)),
-                ..default()
-            }),
-            camera::CameraPlugin,
-            EguiPlugin,
-        ))
+        .add_plugins((DefaultPlugins, camera::CameraPlugin, EguiPlugin))
         .init_resource::<NCube>()
         .add_systems(Startup, (spawn_light, spawn_hypercube))
-        .add_systems(Update, update_face_directions)
+        .add_systems(
+            Update,
+            (rotate_ncube, update_ncube_meshes),
+        )
         .run();
 }
 
@@ -57,7 +50,7 @@ pub struct NCube {
 }
 impl std::default::Default for NCube {
     fn default() -> Self {
-        let ncube = ncube::NCube::new(4, 1.0);
+        let ncube = ncube::NCube::new(5, 1.0);
         Self {
             vertices_3d: ncube.perspective_project_vertices(),
             settings: ncube,
@@ -65,6 +58,8 @@ impl std::default::Default for NCube {
     }
 }
 
+#[derive(Component)]
+struct Edge;
 #[derive(Component)]
 struct Face;
 
@@ -81,6 +76,8 @@ fn spawn_hypercube(
                 mesh: meshes.add(mesh.into()).into(),
                 material: materials.add(StandardMaterial {
                     base_color: Color::CYAN,
+                    double_sided: true,
+                    cull_mode: None,
                     ..default()
                 }),
                 transform: edge::Edge::transform(
@@ -90,6 +87,7 @@ fn spawn_hypercube(
                 ),
                 ..default()
             },
+            Edge,
             NotShadowReceiver,
         ));
     }
@@ -112,6 +110,8 @@ fn spawn_hypercube(
                 material: materials.add(StandardMaterial {
                     base_color: Color::CYAN.with_a(0.2),
                     alpha_mode: AlphaMode::Add,
+                    double_sided: true,
+                    cull_mode: None,
                     ..default()
                 }),
                 ..default()
@@ -122,30 +122,72 @@ fn spawn_hypercube(
     }
 }
 
-fn update_face_directions(
-    q_face_meshes_handles: Query<&Handle<Mesh>, (With<Face>, Changed<Handle<Mesh>>)>,
+fn update_ncube_meshes(
+    ncube: Res<NCube>,
+    mut q_edges_transform: Query<&mut Transform, With<Edge>>,
+    q_face_meshes_handles: Query<&Handle<Mesh>, With<Face>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    q_face_meshes_handles.iter().for_each(|handle| {
-        let mesh = meshes.get_mut(handle).unwrap();
-        let normals = mesh
-            .attribute(Mesh::ATTRIBUTE_NORMAL)
-            .unwrap()
-            .as_float3()
-            .unwrap();
-        let normal = Vec3::from(normals[0]);
-        let vertices = mesh
-            .attribute(Mesh::ATTRIBUTE_POSITION)
-            .unwrap()
-            .as_float3()
-            .unwrap();
-        // Detect whether the normal is the opposite of the origin
-        if normal.dot(Vec3::from(vertices[0]) - Vec3::ZERO) <= 0.0 {
-            mesh.insert_attribute(
+    if !ncube.is_changed() {
+        return;
+    };
+    q_edges_transform
+        .iter_mut()
+        .enumerate()
+        .for_each(|(i, mut transform)| {
+            let edge = ncube.settings.edges.0[i];
+            *transform =
+                edge::Edge::transform(0.01, ncube.vertices_3d[edge.0], ncube.vertices_3d[edge.1]);
+        });
+    q_face_meshes_handles
+        .iter()
+        .enumerate()
+        .for_each(|(i, handle)| {
+            let face = ncube.settings.faces.0[i];
+            meshes.get_mut(handle).unwrap().insert_attribute(
                 Mesh::ATTRIBUTE_POSITION,
-                vec![vertices[2], vertices[1], vertices[0]],
-            );
-            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![-normal; 3]);
-        }
-    });
+                vec![
+                    ncube.vertices_3d[face.0],
+                    ncube.vertices_3d[face.1],
+                    ncube.vertices_3d[face.2],
+                ],
+            )
+        });
 }
+
+fn rotate_ncube(time: Res<Time>, mut ncube: ResMut<NCube>) {
+    let dt = time.delta_seconds();
+    ncube.vertices_3d = ncube
+        .settings
+        .rotate([0, 1], dt)
+        .rotate([2, 3], dt)
+        .perspective_project_vertices();
+}
+
+// fn update_face_directions(
+//     q_face_meshes_handles: Query<&Handle<Mesh>, (With<Face>, Changed<Handle<Mesh>>)>,
+//     mut meshes: ResMut<Assets<Mesh>>,
+// ) {
+//     q_face_meshes_handles.iter().for_each(|handle| {
+//         let mesh = meshes.get_mut(handle).unwrap();
+//         let normals = mesh
+//             .attribute(Mesh::ATTRIBUTE_NORMAL)
+//             .unwrap()
+//             .as_float3()
+//             .unwrap();
+//         let normal = Vec3::from(normals[0]);
+//         let vertices = mesh
+//             .attribute(Mesh::ATTRIBUTE_POSITION)
+//             .unwrap()
+//             .as_float3()
+//             .unwrap();
+//         // Detect whether the normal is the opposite of the origin
+//         if normal.dot(Vec3::from(vertices[0]) - Vec3::ZERO) <= 0.0 {
+//             mesh.insert_attribute(
+//                 Mesh::ATTRIBUTE_POSITION,
+//                 vec![vertices[2], vertices[1], vertices[0]],
+//             );
+//             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![-normal; 3]);
+//         }
+//     });
+// }
