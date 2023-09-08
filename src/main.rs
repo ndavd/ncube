@@ -62,6 +62,7 @@ pub struct NCube {
     paused: bool,
     edge_color: Color,
     face_color: Color,
+    edge_thickness: f32,
 }
 impl std::default::Default for NCube {
     fn default() -> Self {
@@ -82,6 +83,7 @@ impl std::default::Default for NCube {
             paused: false,
             edge_color: Color::CYAN,
             face_color: Color::CYAN.with_a(0.1),
+            edge_thickness: 0.01,
         }
     }
 }
@@ -194,7 +196,7 @@ fn update_ncube_meshes(
                     edge_material.base_color = ncube.edge_color;
                 }
                 *transform = edge::Edge::transform(
-                    0.01,
+                    ncube.edge_thickness,
                     ncube.vertices_3d[edge.0],
                     ncube.vertices_3d[edge.1],
                 );

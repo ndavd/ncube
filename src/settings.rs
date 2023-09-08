@@ -63,6 +63,10 @@ fn info_panel(
                     ui.end_row();
                     ncube.face_color = Color::from(color);
 
+                    ui.label("edge thickness:");
+                    ui.add(egui::Slider::new(&mut ncube.edge_thickness, 0.0..=0.025));
+                    ui.end_row();
+
                     for i in 0..ncube.planes_of_rotation.len() {
                         let plane = ncube.planes_of_rotation[i];
                         let (angle, vel) = *ncube.rotations.get(&plane).unwrap();
