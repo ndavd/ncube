@@ -57,6 +57,10 @@ fn info_panel(
                     ui.label(format!("{}", ncube.faces.0.len() / 2));
                     ui.end_row();
 
+                    ui.label("edge thickness:");
+                    ui.add(egui::Slider::new(&mut **ncube_edge_thickness, 0.0..=0.025));
+                    ui.end_row();
+
                     ui.label("edge color:");
                     let mut color: [f32; 4] = [
                         ncube_edge_color.r(),
@@ -78,10 +82,6 @@ fn info_panel(
                     ui.color_edit_button_rgba_unmultiplied(&mut color);
                     ui.end_row();
                     **ncube_face_color = Color::from(color);
-
-                    ui.label("edge thickness:");
-                    ui.add(egui::Slider::new(&mut **ncube_edge_thickness, 0.0..=0.025));
-                    ui.end_row();
 
                     for i in 0..ncube_planes_of_rotation.len() {
                         let plane = ncube_planes_of_rotation[i];

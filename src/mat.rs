@@ -37,12 +37,22 @@ impl Mat {
         }
     }
 
-    pub fn rotation(rows: usize, cols: usize, plane: [usize; 2], theta: f32) -> Self {
+    pub fn rotation(
+        rows: usize,
+        cols: usize,
+        planes: &Vec<(usize, usize)>,
+        thetas: &Vec<f32>,
+    ) -> Self {
         let mut m = Self::identity(rows, cols);
-        m.matrix[plane[0]][plane[0]] = theta.cos();
-        m.matrix[plane[0]][plane[1]] = -theta.sin();
-        m.matrix[plane[1]][plane[0]] = theta.sin();
-        m.matrix[plane[1]][plane[1]] = theta.cos();
+        let assign_element = |element: &mut f32, v: f32| {
+            *element = if *element == 0.0 { v } else { *element * v };
+        };
+        for i in 0..planes.len() {
+            assign_element(&mut m.matrix[planes[i].0][planes[i].0], thetas[i].cos());
+            assign_element(&mut m.matrix[planes[i].0][planes[i].1], -thetas[i].sin());
+            assign_element(&mut m.matrix[planes[i].1][planes[i].0], thetas[i].sin());
+            assign_element(&mut m.matrix[planes[i].1][planes[i].1], thetas[i].cos());
+        }
         m
     }
 

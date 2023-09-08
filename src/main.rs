@@ -166,7 +166,6 @@ fn spawn_hypercube(
                 None => (0.0_f32, 0.0_f32),
             };
             rotations.insert(*plane, v);
-            ncube.rotate([plane.0, plane.1], v.1);
         }
         **ncube_planes_of_rotation = planes_of_rotation;
         **ncube_rotations = rotations;
@@ -176,7 +175,7 @@ fn spawn_hypercube(
     let mesh = shape::Cube::default();
     for (i, j) in &ncube.edges.0 {
         commands.spawn((
-            PbrBundle {
+            MaterialMeshBundle {
                 mesh: meshes.add(mesh.into()).into(),
                 material: materials.add(StandardMaterial {
                     base_color: **ncube_edge_color,
@@ -290,13 +289,15 @@ fn rotate_ncube(
         return;
     }
     let dt = time.delta_seconds();
+    let mut das = Vec::new();
     for i in 0..ncube_planes_of_rotation.len() {
         let plane = ncube_planes_of_rotation[i];
         let (angle, vel) = *ncube_rotations.get(&plane).unwrap();
         let da = dt * vel;
-        ncube.rotate([plane.0, plane.1], da);
+        das.push(da);
         ncube_rotations.insert((plane.0, plane.1), (angle + da, vel));
     }
+    ncube.rotate(&ncube_planes_of_rotation, &das);
     **ncube_vertices_3d = ncube.perspective_project_vertices();
 }
 
