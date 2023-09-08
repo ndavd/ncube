@@ -60,7 +60,8 @@ pub struct NCube {
     /// v: Angle, angular velocity
     rotations: std::collections::HashMap<(usize, usize), (f32, f32)>,
     paused: bool,
-    color: Color,
+    edge_color: Color,
+    face_color: Color,
 }
 impl std::default::Default for NCube {
     fn default() -> Self {
@@ -79,7 +80,8 @@ impl std::default::Default for NCube {
             planes_of_rotation,
             rotations,
             paused: false,
-            color: Color::CYAN,
+            edge_color: Color::CYAN,
+            face_color: Color::CYAN.with_a(0.1),
         }
     }
 }
@@ -124,7 +126,7 @@ fn spawn_hypercube(
             PbrBundle {
                 mesh: meshes.add(mesh.into()).into(),
                 material: materials.add(StandardMaterial {
-                    base_color: ncube.color,
+                    base_color: ncube.edge_color,
                     double_sided: true,
                     cull_mode: None,
                     ..default()
@@ -157,7 +159,7 @@ fn spawn_hypercube(
             MaterialMeshBundle {
                 mesh: meshes.add(mesh.into()).into(),
                 material: materials.add(StandardMaterial {
-                    base_color: ncube.color.with_a(0.1),
+                    base_color: ncube.face_color,
                     alpha_mode: AlphaMode::Add,
                     double_sided: true,
                     cull_mode: None,
@@ -187,7 +189,10 @@ fn update_ncube_meshes(
         .enumerate()
         .for_each(|(i, (mut transform, material_handle))| {
             if let Some(edge) = ncube.settings.edges.0.get(i) {
-                materials.get_mut(material_handle).unwrap().base_color = ncube.color;
+                let edge_material = materials.get_mut(material_handle).unwrap();
+                if edge_material.base_color != ncube.edge_color {
+                    edge_material.base_color = ncube.edge_color;
+                }
                 *transform = edge::Edge::transform(
                     0.01,
                     ncube.vertices_3d[edge.0],
@@ -200,7 +205,10 @@ fn update_ncube_meshes(
         .enumerate()
         .for_each(|(i, (mesh_handle, material_handle))| {
             if let Some(face) = ncube.settings.faces.0.get(i) {
-                materials.get_mut(material_handle).unwrap().base_color = ncube.color.with_a(0.1);
+                let face_material = materials.get_mut(material_handle).unwrap();
+                if face_material.base_color != ncube.face_color {
+                    face_material.base_color = ncube.face_color;
+                }
                 meshes.get_mut(mesh_handle).unwrap().insert_attribute(
                     Mesh::ATTRIBUTE_POSITION,
                     vec![

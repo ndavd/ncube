@@ -14,14 +14,18 @@ impl Plugin for CameraPlugin {
 const WHEEL_FACTOR: f32 = 0.3;
 const MOTION_FACTOR: f32 = 0.3;
 
+pub fn get_default_camera_transform() -> Transform {
+    Transform::from_translation(Vec3::from_spherical(SphericalCoordinate::new(
+        4.0,
+        std::f32::consts::PI / 2.0,
+        0.0,
+    )))
+    .looking_at(Vec3::ZERO, Vec3::Y)
+}
+
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_translation(Vec3::from_spherical(SphericalCoordinate::new(
-            4.0,
-            std::f32::consts::PI / 2.0,
-            0.0,
-        )))
-        .looking_at(Vec3::ZERO, Vec3::Y),
+        transform: get_default_camera_transform(),
         camera_3d: Camera3d {
             clear_color: bevy::core_pipeline::clear_color::ClearColorConfig::Custom(Color::BLACK),
             ..default()

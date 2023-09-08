@@ -15,6 +15,7 @@ fn info_panel(
     mut ncube_dimension: ResMut<NCubeDimension>,
     mut ncube: ResMut<NCube>,
     mut contexts: EguiContexts,
+    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
 ) {
     egui::Window::new("settings")
         .default_pos((0.0, 0.0))
@@ -40,11 +41,27 @@ fn info_panel(
                     ui.label(format!("{}", ncube.settings.faces.0.len() / 2));
                     ui.end_row();
 
-                    ui.label("color:");
-                    let mut color: [f32; 3] = [ncube.color.r(), ncube.color.g(), ncube.color.b()];
-                    ui.color_edit_button_rgb(&mut color);
+                    ui.label("edge color:");
+                    let mut color: [f32; 4] = [
+                        ncube.edge_color.r(),
+                        ncube.edge_color.g(),
+                        ncube.edge_color.b(),
+                        ncube.edge_color.a(),
+                    ];
+                    ui.color_edit_button_rgba_unmultiplied(&mut color);
                     ui.end_row();
-                    ncube.color = Color::from(color);
+                    ncube.edge_color = Color::from(color);
+
+                    ui.label("face color:");
+                    let mut color: [f32; 4] = [
+                        ncube.face_color.r(),
+                        ncube.face_color.g(),
+                        ncube.face_color.b(),
+                        ncube.face_color.a(),
+                    ];
+                    ui.color_edit_button_rgba_unmultiplied(&mut color);
+                    ui.end_row();
+                    ncube.face_color = Color::from(color);
 
                     for i in 0..ncube.planes_of_rotation.len() {
                         let plane = ncube.planes_of_rotation[i];
@@ -62,6 +79,8 @@ fn info_panel(
                             settings: ncube.settings.clone(),
                             ..default()
                         };
+                        *q_camera_transform.get_single_mut().unwrap() =
+                            crate::camera::get_default_camera_transform();
                     }
                     if ncube.paused {
                         ui.label(
