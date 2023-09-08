@@ -6,7 +6,7 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera)
+        app.add_systems(Startup, (spawn_camera, spawn_lights))
             .add_systems(Update, update_camera);
     }
 }
@@ -17,7 +17,9 @@ const MOTION_FACTOR: f32 = 0.3;
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_translation(Vec3::from_spherical(SphericalCoordinate::new(
-            4.0, 45.0, 45.0,
+            4.0,
+            std::f32::consts::PI / 2.0,
+            0.0,
         )))
         .looking_at(Vec3::ZERO, Vec3::Y),
         camera_3d: Camera3d {
@@ -28,15 +30,36 @@ fn spawn_camera(mut commands: Commands) {
     });
 }
 
+fn spawn_lights(mut commands: Commands) {
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(3.0, 8.0, 4.0),
+        ..default()
+    });
+    commands.spawn(PointLightBundle {
+        point_light: PointLight {
+            intensity: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(-4.0, 8.0, -4.0),
+        ..default()
+    });
+}
+
 fn update_camera(
     mut q_camera_transform: Query<&mut Transform, With<Camera>>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
-    mut primary_window_query: Query<&mut Window, With<PrimaryWindow>>,
+    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let mut camera_transform = q_camera_transform.get_single_mut().unwrap();
-    let mut window = primary_window_query.get_single_mut().unwrap();
+    let mut window = q_primary_window.get_single_mut().unwrap();
 
     if !mouse_button_input.pressed(MouseButton::Right) {
         if mouse_button_input.just_released(MouseButton::Right) {

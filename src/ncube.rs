@@ -7,7 +7,7 @@ where
     Self: Sized,
 {
     fn factorial(&self) -> Self;
-    fn chooses(&self, k: Self) -> Self;
+    fn permute(&self, k: Self) -> Self;
     fn pair_permutations(from: Self, to: Self) -> Vec<(Self, Self)>;
 }
 impl ExtendedMathOps for usize {
@@ -19,7 +19,7 @@ impl ExtendedMathOps for usize {
         }
         f
     }
-    fn chooses(&self, k: Self) -> Self {
+    fn permute(&self, k: Self) -> Self {
         self.factorial() / (k.factorial() * (self - k).factorial())
     }
     /// Generates a vector with the permutations of 2 integers within a range
@@ -30,7 +30,29 @@ impl ExtendedMathOps for usize {
     }
 }
 
-#[derive(Debug)]
+pub trait PermuteFour<T> {
+    fn permute_four(&self) -> Vec<[T; 4]>;
+}
+
+impl<T> PermuteFour<T> for Vec<T>
+where
+    T: Copy,
+{
+    fn permute_four(&self) -> Vec<[T; 4]> {
+        let to = self.len() - 1;
+        (0..=to)
+            .flat_map(|i| {
+                ((i + 1)..=to).flat_map(move |j| {
+                    ((j + 1)..=to).flat_map(move |k| {
+                        ((k + 1)..=to).map(move |l| [self[i], self[j], self[k], self[l]])
+                    })
+                })
+            })
+            .collect()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct NCube {
     pub dimensions: usize,
     pub size: f32,
@@ -42,14 +64,14 @@ pub struct NCube {
     pub faces: NFaces,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NVertices(pub Vec<Vec<f32>>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Each edge is composed of 2 vertices (index)
 pub struct NEdges(pub Vec<(usize, usize)>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Each face is composed of 3 vertices (index)
 pub struct NFaces(pub Vec<(usize, usize, usize)>);
 
@@ -77,6 +99,7 @@ impl std::fmt::Display for NVertices {
     }
 }
 
+#[allow(dead_code)]
 impl NCube {
     /// Creates an `n` dimensional hypercube of size `s`.
     pub fn new(n: usize, s: f32) -> Self {
@@ -96,7 +119,7 @@ impl NCube {
     }
 
     fn _face_count(n: usize, m: usize) -> usize {
-        2_usize.pow((n - m).try_into().unwrap()) * n.chooses(m)
+        2_usize.pow((n - m).try_into().unwrap()) * n.permute(m)
     }
 
     fn _vertices(n: usize, s: f32) -> NVertices {
@@ -141,7 +164,8 @@ impl NCube {
     fn _faces(vertices: &NVertices, n: usize) -> NFaces {
         let extract_faces = |vertices: Vec<(usize, &Vec<f32>)>| {
             vertices
-                .windows(4)
+                .permute_four()
+                .iter()
                 .filter(|w| {
                     Vec::shared_dimensions(&w.iter().map(|i| i.1).collect::<Vec<_>>()).len()
                         == n - 2
@@ -178,6 +202,8 @@ impl NCube {
                     ]
                     .concat()
                 })
+                .collect::<std::collections::HashSet<_>>()
+                .into_iter()
                 .collect()
         };
         assert_eq!(faces.len(), Self::_face_count(n, 2) * 2);

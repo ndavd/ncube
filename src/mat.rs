@@ -5,6 +5,7 @@ pub struct Mat {
     matrix: Vec<Vec<f32>>,
 }
 
+#[allow(dead_code)]
 impl Mat {
     pub fn new(mat: Vec<Vec<f32>>) -> Self {
         let row_len = mat[0].len();

@@ -2351,6 +2351,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ncube"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy_egui",
+]
+
+[[package]]
 name = "ndk"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2721,14 +2729,6 @@ name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
-
-[[package]]
-name = "penteract"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bevy_egui",
-]
 
 [[package]]
 name = "percent-encoding"
