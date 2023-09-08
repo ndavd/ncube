@@ -1,4 +1,3 @@
-use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;

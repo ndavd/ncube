@@ -1,7 +1,6 @@
 use crate::ncube::ExtendedMathOps;
 use crate::vec::TriangleNormal;
 use bevy::pbr::AlphaMode;
-use bevy::pbr::NotShadowReceiver;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
 use std::collections::HashMap;
@@ -192,7 +191,6 @@ fn spawn_hypercube(
             },
             Edge,
             NCubeMesh,
-            NotShadowReceiver,
         ));
     }
     for (i, j, k) in &ncube.faces.0 {
@@ -221,7 +219,6 @@ fn spawn_hypercube(
             },
             Face,
             NCubeMesh,
-            NotShadowReceiver,
         ));
     }
 }
@@ -237,18 +234,26 @@ fn update_ncube_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    if ncube_edge_color.is_changed() {
+        q_edges.iter().for_each(|(_, material_handle)| {
+            materials.get_mut(material_handle).unwrap().base_color = **ncube_edge_color;
+        });
+    }
+    if ncube_face_color.is_changed() {
+        q_face_handles.iter().for_each(|(_, material_handle)| {
+            materials.get_mut(material_handle).unwrap().base_color = **ncube_face_color;
+        });
+    }
+
     if !ncube.is_changed() {
         return;
     };
+
     q_edges
         .iter_mut()
         .enumerate()
-        .for_each(|(i, (mut transform, material_handle))| {
+        .for_each(|(i, (mut transform, _))| {
             if let Some(edge) = ncube.edges.0.get(i) {
-                let edge_material = materials.get_mut(material_handle).unwrap();
-                if edge_material.base_color != **ncube_edge_color {
-                    edge_material.base_color = **ncube_edge_color;
-                }
                 *transform = edge::Edge::transform(
                     **ncube_edge_thickness,
                     ncube_vertices_3d[edge.0],
@@ -259,12 +264,8 @@ fn update_ncube_meshes(
     q_face_handles
         .iter()
         .enumerate()
-        .for_each(|(i, (mesh_handle, material_handle))| {
+        .for_each(|(i, (mesh_handle, _))| {
             if let Some(face) = ncube.faces.0.get(i) {
-                let face_material = materials.get_mut(material_handle).unwrap();
-                if face_material.base_color != **ncube_face_color {
-                    face_material.base_color = **ncube_face_color;
-                }
                 meshes.get_mut(mesh_handle).unwrap().insert_attribute(
                     Mesh::ATTRIBUTE_POSITION,
                     vec![

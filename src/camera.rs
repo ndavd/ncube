@@ -6,7 +6,7 @@ pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_camera, spawn_lights))
+        app.add_systems(Startup, (spawn_camera, spawn_lighting))
             .add_systems(Update, update_camera);
     }
 }
@@ -34,11 +34,10 @@ fn spawn_camera(mut commands: Commands) {
     });
 }
 
-fn spawn_lights(mut commands: Commands) {
+fn spawn_lighting(mut commands: Commands) {
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
-            shadows_enabled: true,
             ..default()
         },
         transform: Transform::from_xyz(3.0, 8.0, 4.0),
@@ -47,7 +46,6 @@ fn spawn_lights(mut commands: Commands) {
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
-            shadows_enabled: true,
             ..default()
         },
         transform: Transform::from_xyz(-4.0, 8.0, -4.0),
