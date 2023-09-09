@@ -13,6 +13,8 @@ mod settings;
 mod text;
 mod vec;
 
+pub const S: f32 = 1.0;
+
 fn main() {
     App::new()
         .init_resource::<NCubeDimension>()
@@ -64,7 +66,7 @@ pub struct NCube(ncube::NCube);
 impl std::default::Default for NCube {
     fn default() -> Self {
         let d = NCubeDimension::default();
-        Self(ncube::NCube::new(*d, 1.0))
+        Self(ncube::NCube::new(*d, S))
     }
 }
 
@@ -162,16 +164,20 @@ fn spawn_hypercube(
         **ncube = ncube::NCube::new(**ncube_dimension, 1.0);
         let planes_of_rotation = usize::pair_permutations(0, **ncube_dimension - 1);
         let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
+        let mut angles = Vec::new();
         for plane in &planes_of_rotation {
             let v = match ncube_rotations.get(plane) {
                 Some(v) => *v,
                 None => (0.0_f32, 0.0_f32),
             };
             rotations.insert(*plane, v);
+            angles.push(v.0);
         }
-        **ncube_planes_of_rotation = planes_of_rotation;
         **ncube_rotations = rotations;
-        **ncube_vertices_3d = ncube.perspective_project_vertices();
+        **ncube_vertices_3d = ncube
+            .rotate(&planes_of_rotation, &angles)
+            .perspective_project_vertices();
+        **ncube_planes_of_rotation = planes_of_rotation;
     }
 
     let mesh = shape::Cube::default();

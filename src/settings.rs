@@ -1,3 +1,4 @@
+use crate::ncube::NCube as InnerNCube;
 use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubeEdgeColor;
@@ -6,6 +7,8 @@ use crate::NCubeFaceColor;
 use crate::NCubeIsPaused;
 use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
+use crate::NCubeVertices3D;
+use crate::S;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 
@@ -13,9 +16,30 @@ pub struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EguiPlugin).add_systems(Update, info_panel);
+        app.init_resource::<IsHoveringFile>()
+            .add_plugins(EguiPlugin)
+            .add_systems(Update, info_panel);
     }
 }
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct CameraTransform {
+    translation: Vec3,
+    rotation: Quat,
+    scale: Vec3,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct NCubeData {
+    dimension: usize,
+    rotations: Vec<(usize, usize, f32, f32)>,
+    edge_thickness: f32,
+    edge_color: Color,
+    face_color: Color,
+    camera_transform: CameraTransform,
+}
+
+#[derive(Resource, Deref, DerefMut, Default)]
+struct IsHoveringFile(bool);
 
 fn info_panel(
     mut ncube_dimension: ResMut<NCubeDimension>,
@@ -25,9 +49,12 @@ fn info_panel(
     mut ncube_edge_color: ResMut<NCubeEdgeColor>,
     mut ncube_face_color: ResMut<NCubeFaceColor>,
     mut ncube_edge_thickness: ResMut<NCubeEdgeThickness>,
-    ncube_is_paused: Res<NCubeIsPaused>,
+    mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
+    mut ncube_is_paused: ResMut<NCubeIsPaused>,
     mut contexts: EguiContexts,
     mut q_camera_transform: Query<&mut Transform, With<Camera>>,
+    mut drag_drop_event: EventReader<FileDragAndDrop>,
+    mut is_hovering_file: ResMut<IsHoveringFile>,
 ) {
     egui::Window::new("settings")
         .default_pos((0.0, 0.0))
@@ -106,10 +133,93 @@ fn info_panel(
                             *ncube_edge_color = NCubeEdgeColor::default();
                         }
                         if **ncube_is_paused {
-                            ui.label(
-                                egui::RichText::new("paused")
-                                    .color(egui::Color32::from_rgb(255, 0, 0)),
-                            );
+                            ui.colored_label(egui::Color32::RED, "paused");
+                        }
+                        ui.end_row();
+
+                        if ui.button("export to data file").clicked() {
+                            if let Some(home_dir) = &home::home_dir() {
+                                if let Ok(mut file) = std::fs::File::create(
+                                    std::path::Path::new(home_dir).join(format!(
+                                        "{}cube-{}.data",
+                                        **ncube_dimension,
+                                        std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_secs()
+                                    )),
+                                ) {
+                                    let camera_transform =
+                                        *q_camera_transform.get_single().unwrap();
+                                    let ncube_data = NCubeData {
+                                        dimension: **ncube_dimension,
+                                        rotations: ncube_rotations
+                                            .iter()
+                                            .map(|(k, v)| (k.0, k.1, v.0, v.1))
+                                            .collect(),
+                                        edge_thickness: **ncube_edge_thickness,
+                                        edge_color: **ncube_edge_color,
+                                        face_color: **ncube_face_color,
+                                        camera_transform: CameraTransform {
+                                            translation: camera_transform.translation,
+                                            rotation: camera_transform.rotation,
+                                            scale: camera_transform.scale,
+                                        },
+                                    };
+                                    serde_json::to_writer_pretty(&mut file, &ncube_data)
+                                        .unwrap_or_else(|_| {});
+                                }
+                            }
+                        }
+
+                        ui.colored_label(
+                            if **is_hovering_file {
+                                egui::Color32::GREEN
+                            } else {
+                                egui::Color32::LIGHT_GRAY
+                            },
+                            "drop data file",
+                        );
+                        if let Some(e) = drag_drop_event.iter().nth(0) {
+                            match e {
+                                FileDragAndDrop::HoveredFile { .. } => {
+                                    **is_hovering_file = true;
+                                }
+                                FileDragAndDrop::DroppedFile { path_buf, .. } => {
+                                    let file = std::fs::File::open(&path_buf).unwrap();
+                                    let reader = std::io::BufReader::new(file);
+                                    if let Ok(data) =
+                                        serde_json::from_reader::<_, NCubeData>(reader)
+                                    {
+                                        *q_camera_transform.get_single_mut().unwrap() = Transform {
+                                            translation: data.camera_transform.translation,
+                                            scale: data.camera_transform.scale,
+                                            rotation: data.camera_transform.rotation,
+                                        };
+                                        **ncube_is_paused = true;
+                                        **ncube_edge_thickness = data.edge_thickness;
+                                        **ncube_edge_color = data.edge_color;
+                                        **ncube_face_color = data.face_color;
+                                        **ncube_dimension = data.dimension;
+                                        **ncube = InnerNCube::new(**ncube_dimension, S);
+                                        **ncube_rotations = std::collections::HashMap::new();
+                                        **ncube_planes_of_rotation = Vec::new();
+                                        let mut angles = Vec::new();
+                                        for (d1, d2, angle, vel) in data.rotations {
+                                            ncube_rotations.insert((d1, d2), (angle, vel));
+                                            ncube_planes_of_rotation.push((d1, d2));
+                                            angles.push(angle);
+                                        }
+                                        **ncube_vertices_3d = ncube
+                                            .rotate(&ncube_planes_of_rotation, &angles)
+                                            .perspective_project_vertices();
+                                    }
+                                    **is_hovering_file = false;
+                                }
+                                _ => {
+                                    **is_hovering_file = false;
+                                }
+                            }
                         }
                         ui.end_row();
                     });
