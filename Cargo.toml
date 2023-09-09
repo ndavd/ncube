@@ -1,10 +1,15 @@
 [package]
 name = "ncube"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Nuno David <email@ndavd.com>"]
 license = "MIT"
 description = "Generalized hypercube visualizer"
+readme = ".github/README.md"
+repository = "https://github.com/ndavd/ncube"
+exclude = [".github/demo.gif"]
+keywords = ["simulation", "hypercube", "bevy", "mathematics", "tesseract"]
+categories = ["simulation", "mathematics", "visualization", "graphics"]
 
 [dependencies]
 bevy = "0.11.0"
