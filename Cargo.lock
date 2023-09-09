@@ -2368,7 +2368,7 @@ dependencies = [
 
 [[package]]
 name = "ncube"
-version = "0.1.1"
+version = "1.0.0"
 dependencies = [
  "bevy",
  "bevy_egui",
