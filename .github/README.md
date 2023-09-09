@@ -4,7 +4,9 @@
 It works by rotating the hyperdimensional vertices and applying a chain of perspective projections to them until the 3rd dimension is reached.
 **Everything is generated in real time just from the dimension number.**
 
-It also allows for controlling the simulation, such as tweaking the angular velocity on any plane of rotation.
+Aditional features:
+- Real time control of the simulation, such as tweaking the angular velocity factor of any plane of rotation
+- Exporting and loading custom configurations as files
 
 ![Demo](https://raw.githubusercontent.com/ndavd/ncube/main/.github/demo.gif)
 
