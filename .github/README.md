@@ -9,12 +9,15 @@ It also allows for controlling the simulation in real time, such as tweaking the
 
 ## Installation
 
-### Building from source
+### Download the pre-built binaries
+Pre-built binaries for Windows, Linux, MacOS can be found in the [releases](https://github.com/ndavd/ncube/releases) page.
+
+### Build from source
 You need to setup Rust ([cargo](https://doc.rust-lang.org/stable/cargo/)) to build this project from source.
-After that, simply clone the project and run the build command:
+After that, simply clone the project and run the project:
 ```
 git clone https://github.com/ndavd/ncube
 cd ncube
-cargo build --release
-./target/release/ncube
+cargo run --release
 ```
+Keep in mind that if you want to move the binary you must also take the `assets/` folder with it and keep them in the same directory.
