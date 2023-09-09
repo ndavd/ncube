@@ -7,23 +7,55 @@ on:
 
 env:
   binary: ncube
-  add_binaries_to_github_release: true
-
 
 jobs:
+  # Publish on crates.io
+  publish-to-crates:
+    runs-on: ubuntu-latest
 
-  # Build for Linux
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Cache toolchain
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+
+      - name: Publish to crates.io
+        run: cargo publish --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+
+  # Linux
   release-linux:
     runs-on: ubuntu-latest
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu
-      - name: install dependencies
+
+      - name: Cache toolchain
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
         run: |
           sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
@@ -48,7 +80,6 @@ jobs:
           name: linux
 
       - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -57,15 +88,19 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
-  # Build for Windows
+  # Publish for Windows
   release-windows:
     runs-on: windows-latest
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
 
@@ -89,7 +124,6 @@ jobs:
           name: windows
 
       - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -98,18 +132,23 @@ jobs:
           tag: ${{ github.ref }}
           overwrite: true
 
-  # Build for macOS
+  # Publish for macOS
   release-macos:
     runs-on: macOS-latest
 
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin
-      - name: Environment Setup
+
+      - name: Setup environment
         run: |
           export CFLAGS="-fno-stack-check"
           export MACOSX_DEPLOYMENT_TARGET="10.9"
@@ -118,7 +157,7 @@ jobs:
         run: |
           cargo build --release --target x86_64-apple-darwin
 
-      - name: Prepare Package
+      - name: Prepare package
         run: |
           mkdir -p ${{ env.binary }}.app/Contents/MacOS
           cp target/x86_64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
@@ -131,7 +170,6 @@ jobs:
           name: mac
 
       - name: Upload binaries to release
-        if: ${{ env.add_binaries_to_github_release == 'true' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -139,51 +177,3 @@ jobs:
           asset_name: ${{ env.binary }}-macos-${{ steps.get_version.outputs.tag }}.dmg
           tag: ${{ github.ref }}
           overwrite: true
-
-  check-if-upload-to-itch-is-configured:
-    runs-on: ubuntu-latest
-    outputs:
-      should-upload: ${{ steps.check-env.outputs.has-itch-target }}
-    steps:
-      - id: check-env
-        run: |
-          if [[ -z "$itch_target" ]]; then
-            echo "has-itch-target=no" >> $GITHUB_OUTPUT
-          else
-            echo "has-itch-target=yes" >> $GITHUB_OUTPUT
-          fi
-
-  upload-to-itch:
-    runs-on: ubuntu-latest
-    needs:
-      - check-if-upload-to-itch-is-configured
-      - release-linux
-      - release-windows
-      - release-macos
-    if: ${{ needs.check-if-upload-to-itch-is-configured.outputs.should-upload == 'yes' }}
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: ./builds
-
-      - name: Install butler
-        run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
-          unzip butler.zip
-          chmod +x butler
-          ./butler -V
-      - uses: olegtarasov/get-tag@v2.1.2
-        id: get_version
-      - name: Upload to itch.io
-        env:
-          BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
-        run: |
-          for channel in $(ls builds); do
-            ./butler push \
-                --fix-permissions \
-                --userversion="${{ steps.get_version.outputs.tag }}" \
-                builds/$channel/* \
-                ${{ env.itch_target }}:$channel
-          done
