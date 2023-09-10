@@ -520,16 +520,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_embedded_assets"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49439174a7d2df4244e6fa0bff15cbe5cf9def6b1265a10979171e9023e85f9f"
-dependencies = [
- "bevy",
- "cargo-emit",
-]
-
-[[package]]
 name = "bevy_encase_derive"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1165,12 +1155,6 @@ name = "bytes"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
-
-[[package]]
-name = "cargo-emit"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1582e1c9e755dd6ad6b224dcffb135d199399a4568d454bd89fe515ca8425695"
 
 [[package]]
 name = "cc"
@@ -2372,7 +2356,6 @@ version = "1.0.1"
 dependencies = [
  "bevy",
  "bevy_egui",
- "bevy_embedded_assets",
  "home",
  "serde",
  "serde_json",

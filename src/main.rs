@@ -3,7 +3,6 @@ use crate::vec::TriangleNormal;
 use bevy::pbr::AlphaMode;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
-use bevy_embedded_assets::EmbeddedAssetPlugin;
 use std::collections::HashMap;
 mod camera;
 mod edge;
@@ -27,9 +26,7 @@ fn main() {
         .init_resource::<NCubeFaceColor>()
         .init_resource::<NCubeEdgeThickness>()
         .add_plugins((
-            DefaultPlugins
-                .build()
-                .add_before::<bevy::asset::AssetPlugin, _>(EmbeddedAssetPlugin),
+            DefaultPlugins,
             camera::CameraPlugin,
             settings::SettingsPlugin,
             text::TextPlugin,

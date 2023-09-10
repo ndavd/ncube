@@ -3,8 +3,6 @@ use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
 use bevy::prelude::*;
 
-const FONT_ASSET: &str = "gohufont-14.ttf";
-
 pub struct TextPlugin;
 impl Plugin for TextPlugin {
     fn build(&self, app: &mut App) {
@@ -20,8 +18,16 @@ struct TitleText;
 #[derive(Component)]
 struct InfoText;
 
-fn spawn_title_text(mut commands: Commands, assets_server: Res<AssetServer>) {
-    let font: Handle<Font> = assets_server.load(FONT_ASSET);
+#[derive(Resource, Deref, DerefMut, Default)]
+pub struct FontHandle(Handle<Font>);
+
+fn spawn_title_text(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
+    let font = Vec::from(include_bytes!("../assets/gohufont-14.ttf") as &[u8]);
+    let font = Font::try_from_bytes(font).unwrap();
+    let font = fonts.add(font);
+
+    commands.insert_resource(FontHandle(font.clone()));
+
     let text_style = TextStyle {
         font: font.clone(),
         font_size: 30.0,
@@ -79,7 +85,7 @@ fn spawn_info_text(
     mut commands: Commands,
     ncube_planes_of_rotation: Res<NCubePlanesOfRotation>,
     q_info_text_entities: Query<Entity, With<InfoText>>,
-    assets_server: Res<AssetServer>,
+    font_handle: Res<FontHandle>,
 ) {
     if !ncube_planes_of_rotation.is_changed() {
         return;
@@ -89,9 +95,8 @@ fn spawn_info_text(
         commands.entity(entity).despawn();
     });
 
-    let font: Handle<Font> = assets_server.load(FONT_ASSET);
     let text_style = TextStyle {
-        font,
+        font: font_handle.clone(),
         font_size: 20.0,
         color: Color::WHITE,
     };
