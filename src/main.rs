@@ -272,7 +272,16 @@ fn update_ncube_meshes(
         .enumerate()
         .for_each(|(i, (mesh_handle, _))| {
             if let Some(face) = ncube.faces.0.get(i) {
-                meshes.get_mut(mesh_handle).unwrap().insert_attribute(
+                let mesh = meshes.get_mut(mesh_handle).unwrap();
+                mesh.insert_attribute(
+                    Mesh::ATTRIBUTE_NORMAL,
+                    vec![
+                        ncube_vertices_3d[face.0]
+                            .normal(&ncube_vertices_3d[face.1], &ncube_vertices_3d[face.2]);
+                        3
+                    ],
+                );
+                mesh.insert_attribute(
                     Mesh::ATTRIBUTE_POSITION,
                     vec![
                         ncube_vertices_3d[face.0],
