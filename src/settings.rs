@@ -1,3 +1,4 @@
+use crate::camera::get_default_camera_transform;
 use crate::ncube::NCube as InnerNCube;
 use crate::NCube;
 use crate::NCubeDimension;
@@ -7,6 +8,7 @@ use crate::NCubeFaceColor;
 use crate::NCubeIsPaused;
 use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
+use crate::NCubeUnlit;
 use crate::NCubeVertices3D;
 use crate::S;
 use bevy::prelude::*;
@@ -27,15 +29,31 @@ struct CameraTransform {
     rotation: Quat,
     scale: Vec3,
 }
+impl std::default::Default for CameraTransform {
+    fn default() -> Self {
+        let transform = get_default_camera_transform();
+        Self {
+            translation: transform.translation,
+            rotation: transform.rotation,
+            scale: transform.scale,
+        }
+    }
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct NCubeData {
     dimension: usize,
     rotations: Vec<(usize, usize, f32, f32)>,
-    edge_thickness: f32,
-    edge_color: Color,
-    face_color: Color,
+    #[serde(default)]
     camera_transform: CameraTransform,
+    #[serde(default)]
+    edge_thickness: f32,
+    #[serde(default)]
+    edge_color: Color,
+    #[serde(default)]
+    face_color: Color,
+    #[serde(default)]
+    unlit: bool,
 }
 
 #[derive(Resource, Deref, DerefMut, Default)]
@@ -50,6 +68,7 @@ fn info_panel(
     mut ncube_face_color: ResMut<NCubeFaceColor>,
     mut ncube_edge_thickness: ResMut<NCubeEdgeThickness>,
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
+    mut ncube_unlit: ResMut<NCubeUnlit>,
     mut ncube_is_paused: ResMut<NCubeIsPaused>,
     mut contexts: EguiContexts,
     mut q_camera_transform: Query<&mut Transform, With<Camera>>,
@@ -83,6 +102,12 @@ fn info_panel(
 
                         ui.label("faces:");
                         ui.label(format!("{}", ncube.faces.0.len() / 2));
+                        ui.end_row();
+
+                        ui.label("realistic lighting:");
+                        let mut lit = !**ncube_unlit;
+                        ui.add(egui::Checkbox::new(&mut lit, ""));
+                        **ncube_unlit = !lit;
                         ui.end_row();
 
                         ui.label("edge thickness:");
@@ -165,6 +190,7 @@ fn info_panel(
                                             rotation: camera_transform.rotation,
                                             scale: camera_transform.scale,
                                         },
+                                        unlit: **ncube_unlit,
                                     };
                                     serde_json::to_writer_pretty(&mut file, &ncube_data)
                                         .unwrap_or_else(|_| {});
@@ -188,31 +214,34 @@ fn info_panel(
                                 FileDragAndDrop::DroppedFile { path_buf, .. } => {
                                     let file = std::fs::File::open(&path_buf).unwrap();
                                     let reader = std::io::BufReader::new(file);
-                                    if let Ok(data) =
-                                        serde_json::from_reader::<_, NCubeData>(reader)
-                                    {
-                                        *q_camera_transform.get_single_mut().unwrap() = Transform {
-                                            translation: data.camera_transform.translation,
-                                            scale: data.camera_transform.scale,
-                                            rotation: data.camera_transform.rotation,
-                                        };
-                                        **ncube_is_paused = true;
-                                        **ncube_edge_thickness = data.edge_thickness;
-                                        **ncube_edge_color = data.edge_color;
-                                        **ncube_face_color = data.face_color;
-                                        **ncube_dimension = data.dimension;
-                                        **ncube = InnerNCube::new(**ncube_dimension, S);
-                                        **ncube_rotations = std::collections::HashMap::new();
-                                        **ncube_planes_of_rotation = Vec::new();
-                                        let mut angles = Vec::new();
-                                        for (d1, d2, angle, vel) in data.rotations {
-                                            ncube_rotations.insert((d1, d2), (angle, vel));
-                                            ncube_planes_of_rotation.push((d1, d2));
-                                            angles.push(angle);
+                                    match serde_json::from_reader::<_, NCubeData>(reader) {
+                                        Ok(data) => {
+                                            *q_camera_transform.get_single_mut().unwrap() =
+                                                Transform {
+                                                    translation: data.camera_transform.translation,
+                                                    scale: data.camera_transform.scale,
+                                                    rotation: data.camera_transform.rotation,
+                                                };
+                                            **ncube_is_paused = true;
+                                            **ncube_edge_thickness = data.edge_thickness;
+                                            **ncube_edge_color = data.edge_color;
+                                            **ncube_face_color = data.face_color;
+                                            **ncube_unlit = data.unlit;
+                                            **ncube_dimension = data.dimension;
+                                            **ncube = InnerNCube::new(**ncube_dimension, S);
+                                            **ncube_rotations = std::collections::HashMap::new();
+                                            **ncube_planes_of_rotation = Vec::new();
+                                            let mut angles = Vec::new();
+                                            for (d1, d2, angle, vel) in data.rotations {
+                                                ncube_rotations.insert((d1, d2), (angle, vel));
+                                                ncube_planes_of_rotation.push((d1, d2));
+                                                angles.push(angle);
+                                            }
+                                            **ncube_vertices_3d = ncube
+                                                .rotate(&ncube_planes_of_rotation, &angles)
+                                                .perspective_project_vertices();
                                         }
-                                        **ncube_vertices_3d = ncube
-                                            .rotate(&ncube_planes_of_rotation, &angles)
-                                            .perspective_project_vertices();
+                                        Err(e) => println!("ERR {e}"),
                                     }
                                     **is_hovering_file = false;
                                 }

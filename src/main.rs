@@ -25,6 +25,7 @@ fn main() {
         .init_resource::<NCubeEdgeColor>()
         .init_resource::<NCubeFaceColor>()
         .init_resource::<NCubeEdgeThickness>()
+        .init_resource::<NCubeUnlit>()
         .add_plugins((
             DefaultPlugins,
             camera::CameraPlugin,
@@ -135,6 +136,14 @@ impl std::default::Default for NCubeEdgeThickness {
     }
 }
 
+#[derive(Resource, Deref, DerefMut)]
+pub struct NCubeUnlit(bool);
+impl std::default::Default for NCubeUnlit {
+    fn default() -> Self {
+        Self(false)
+    }
+}
+
 fn spawn_hypercube(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -144,6 +153,7 @@ fn spawn_hypercube(
     mut ncube_rotations: ResMut<NCubeRotations>,
     mut ncube_planes_of_rotation: ResMut<NCubePlanesOfRotation>,
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
+    ncube_unlit: Res<NCubeUnlit>,
     ncube_edge_color: Res<NCubeEdgeColor>,
     ncube_face_color: Res<NCubeFaceColor>,
     q_ncube_entities: Query<Entity, With<NCubeMesh>>,
@@ -186,6 +196,7 @@ fn spawn_hypercube(
                     base_color: **ncube_edge_color,
                     double_sided: true,
                     cull_mode: None,
+                    unlit: **ncube_unlit,
                     ..default()
                 }),
                 transform: edge::Edge::transform(
@@ -209,8 +220,11 @@ fn spawn_hypercube(
                 ncube_vertices_3d[*k],
             ],
         );
-        let normal = ncube_vertices_3d[*i].normal(&ncube_vertices_3d[*j], &ncube_vertices_3d[*k]);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![normal; 3]);
+        if !**ncube_unlit {
+            let normal =
+                ncube_vertices_3d[*i].normal(&ncube_vertices_3d[*j], &ncube_vertices_3d[*k]);
+            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, vec![normal; 3]);
+        }
         commands.spawn((
             MaterialMeshBundle {
                 mesh: meshes.add(mesh.into()).into(),
@@ -219,6 +233,7 @@ fn spawn_hypercube(
                     alpha_mode: AlphaMode::Add,
                     double_sided: true,
                     cull_mode: None,
+                    unlit: **ncube_unlit,
                     ..default()
                 }),
                 ..default()
@@ -235,6 +250,7 @@ fn update_ncube_meshes(
     ncube_face_color: Res<NCubeFaceColor>,
     ncube_edge_thickness: Res<NCubeEdgeThickness>,
     ncube_vertices_3d: Res<NCubeVertices3D>,
+    ncube_unlit: Res<NCubeUnlit>,
     mut q_edges: Query<(&mut Transform, &Handle<StandardMaterial>), With<Edge>>,
     q_face_handles: Query<(&Handle<Mesh>, &Handle<StandardMaterial>), With<Face>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -248,6 +264,14 @@ fn update_ncube_meshes(
     if ncube_face_color.is_changed() {
         q_face_handles.iter().for_each(|(_, material_handle)| {
             materials.get_mut(material_handle).unwrap().base_color = **ncube_face_color;
+        });
+    }
+    if ncube_unlit.is_changed() {
+        q_edges.iter().for_each(|(_, material_handle)| {
+            materials.get_mut(material_handle).unwrap().unlit = **ncube_unlit;
+        });
+        q_face_handles.iter().for_each(|(_, material_handle)| {
+            materials.get_mut(material_handle).unwrap().unlit = **ncube_unlit;
         });
     }
 
@@ -273,14 +297,16 @@ fn update_ncube_meshes(
         .for_each(|(i, (mesh_handle, _))| {
             if let Some(face) = ncube.faces.0.get(i) {
                 let mesh = meshes.get_mut(mesh_handle).unwrap();
-                mesh.insert_attribute(
-                    Mesh::ATTRIBUTE_NORMAL,
-                    vec![
-                        ncube_vertices_3d[face.0]
-                            .normal(&ncube_vertices_3d[face.1], &ncube_vertices_3d[face.2]);
-                        3
-                    ],
-                );
+                if !**ncube_unlit {
+                    mesh.insert_attribute(
+                        Mesh::ATTRIBUTE_NORMAL,
+                        vec![
+                            ncube_vertices_3d[face.0]
+                                .normal(&ncube_vertices_3d[face.1], &ncube_vertices_3d[face.2]);
+                            3
+                        ],
+                    );
+                }
                 mesh.insert_attribute(
                     Mesh::ATTRIBUTE_POSITION,
                     vec![
