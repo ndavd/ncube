@@ -140,7 +140,8 @@ impl NCube {
     }
 
     fn _edges(vertices: &NVertices, n: usize) -> NEdges {
-        let mut edges = Vec::new();
+        let e_count = Self::_face_count(n, 1);
+        let mut edges = Vec::with_capacity(e_count);
         for i in 0..vertices.0.len() {
             let vertex_a = &vertices.0[i];
             vertices
@@ -153,7 +154,7 @@ impl NCube {
                         edges.push((i, j));
                     }
                 });
-            if edges.len() == Self::_face_count(n, 1) {
+            if edges.len() == e_count {
                 break;
             }
         }
