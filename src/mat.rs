@@ -1,39 +1,50 @@
+#[macro_export]
+macro_rules! emat {
+    ($m:ident [ $i:expr ] [ $j:expr ]) => {
+        $m.matrix[($i * $m.cols) + $j]
+    };
+}
+
 #[derive(Debug, Clone)]
 pub struct Mat {
     pub rows: usize,
     pub cols: usize,
-    matrix: Vec<Vec<f32>>,
+    matrix: Vec<f32>,
 }
 
 #[allow(dead_code)]
 impl Mat {
-    pub fn new(mat: Vec<Vec<f32>>) -> Self {
+    pub fn new(mat: &[&[f32]]) -> Self {
         let row_len = mat[0].len();
         assert!(mat.iter().all(|r| row_len == r.len()));
         Self {
             rows: mat.len(),
             cols: row_len,
-            matrix: mat,
+            matrix: mat.concat().to_vec(),
         }
     }
 
     pub fn identity(rows: usize, cols: usize) -> Self {
-        let mut matrix = Self::fill(0.0, rows, cols).matrix;
+        let mut m = Self::fill(0.0, rows, cols);
         for i in 0..rows {
             for j in 0..cols {
                 if i == j {
-                    matrix[i][j] = 1.0;
+                    emat!(m[i][j]) = 1.0;
                 }
             }
         }
-        Self { rows, cols, matrix }
+        Self {
+            rows,
+            cols,
+            matrix: m.matrix,
+        }
     }
 
     pub fn fill(n: f32, rows: usize, cols: usize) -> Self {
         Self {
             rows,
             cols,
-            matrix: vec![vec![n; cols]; rows],
+            matrix: vec![n; rows * cols],
         }
     }
 
@@ -48,10 +59,10 @@ impl Mat {
             *element = if *element == 0.0 { v } else { *element * v };
         };
         for i in 0..planes.len() {
-            assign_element(&mut m.matrix[planes[i].0][planes[i].0], thetas[i].cos());
-            assign_element(&mut m.matrix[planes[i].0][planes[i].1], -thetas[i].sin());
-            assign_element(&mut m.matrix[planes[i].1][planes[i].0], thetas[i].sin());
-            assign_element(&mut m.matrix[planes[i].1][planes[i].1], thetas[i].cos());
+            assign_element(&mut emat!(m[planes[i].0][planes[i].0]), thetas[i].cos());
+            assign_element(&mut emat!(m[planes[i].0][planes[i].1]), -thetas[i].sin());
+            assign_element(&mut emat!(m[planes[i].1][planes[i].0]), thetas[i].sin());
+            assign_element(&mut emat!(m[planes[i].1][planes[i].1]), thetas[i].cos());
         }
         m
     }
@@ -63,12 +74,14 @@ impl Mat {
 
 impl std::fmt::Display for Mat {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        for row in &self.matrix {
-            write!(f, "[ ")?;
-            for col in row {
-                write!(f, "{col} ")?;
+        for i in 0..self.matrix.len() {
+            if i % self.cols == 0 {
+                write!(f, "[ ")?;
             }
-            writeln!(f, "]")?;
+            write!(f, "{} ", self.matrix[i])?;
+            if i % self.cols == self.cols - 1 {
+                writeln!(f, "]")?;
+            }
         }
         Ok(())
     }
@@ -78,12 +91,11 @@ impl std::ops::Mul for Mat {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         assert_eq!(self.cols, rhs.rows);
-        let mut m: Vec<Vec<f32>> = Vec::new();
+        let mut m: Vec<f32> = Vec::with_capacity(self.rows * rhs.cols);
         for i in 0..self.rows {
-            m.push(Vec::new());
             for j in 0..rhs.cols {
-                m[i].push(
-                    (0..self.cols).fold(0.0, |acc, k| acc + self.matrix[i][k] * rhs.matrix[k][j]),
+                m.push(
+                    (0..self.cols).fold(0.0, |acc, k| acc + emat!(self[i][k]) * emat!(rhs[k][j])),
                 );
             }
         }
@@ -105,7 +117,7 @@ impl std::ops::Mul<Vec<f32>> for Mat {
             rhs[i] = v
                 .iter()
                 .enumerate()
-                .map(|(j, v)| v * self.matrix[i][j])
+                .map(|(j, v)| v * emat!(self[i][j]))
                 .sum();
         }
         rhs
@@ -118,7 +130,7 @@ impl std::ops::Mul<f32> for Mat {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
-                m.matrix[i][j] *= rhs;
+                emat!(m[i][j]) *= rhs;
             }
         }
         m
@@ -130,7 +142,7 @@ impl std::ops::Add<f32> for Mat {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
-                m.matrix[i][j] += rhs;
+                emat!(m[i][j]) += rhs;
             }
         }
         m
@@ -142,7 +154,7 @@ impl std::ops::Sub<f32> for Mat {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
-                m.matrix[i][j] -= rhs;
+                emat!(m[i][j]) -= rhs;
             }
         }
         m
@@ -154,10 +166,7 @@ impl std::cmp::PartialEq for Mat {
         if self.rows != other.rows || self.cols != other.cols {
             return false;
         }
-        self.matrix
-            .iter()
-            .enumerate()
-            .all(|(i, r)| r.iter().enumerate().all(|(j, v)| *v == other.matrix[i][j]))
+        self.matrix == other.matrix
     }
 }
 
@@ -166,18 +175,13 @@ mod tests {
     use super::*;
     #[test]
     fn mat_mul() {
-        let a = Mat::new(vec![
-            vec![1.0, 2.0],
-            vec![-10.0, 4.0],
-            vec![2.0, 30.0],
-            vec![2.0, 10.0],
-        ]);
-        let b = Mat::new(vec![vec![2.0, 4.0, -10.0], vec![2.0, 4.0, -20.0]]);
-        let c = Mat::new(vec![
-            vec![6.0, 12.0, -50.0],
-            vec![-12.0, -24.0, 20.0],
-            vec![64.0, 128.0, -620.0],
-            vec![24.0, 48.0, -220.0],
+        let a = Mat::new(&[&[1.0, 2.0], &[-10.0, 4.0], &[2.0, 30.0], &[2.0, 10.0]]);
+        let b = Mat::new(&[&[2.0, 4.0, -10.0], &[2.0, 4.0, -20.0]]);
+        let c = Mat::new(&[
+            &[6.0, 12.0, -50.0],
+            &[-12.0, -24.0, 20.0],
+            &[64.0, 128.0, -620.0],
+            &[24.0, 48.0, -220.0],
         ]);
         assert_eq!(a * b, c);
     }
@@ -185,20 +189,20 @@ mod tests {
     fn mat_identity() {
         assert_eq!(
             Mat::identity(4, 5),
-            Mat::new(vec![
-                vec![1.0, 0.0, 0.0, 0.0, 0.0],
-                vec![0.0, 1.0, 0.0, 0.0, 0.0],
-                vec![0.0, 0.0, 1.0, 0.0, 0.0],
-                vec![0.0, 0.0, 0.0, 1.0, 0.0],
+            Mat::new(&[
+                &[1.0, 0.0, 0.0, 0.0, 0.0],
+                &[0.0, 1.0, 0.0, 0.0, 0.0],
+                &[0.0, 0.0, 1.0, 0.0, 0.0],
+                &[0.0, 0.0, 0.0, 1.0, 0.0],
             ])
         );
     }
     #[test]
     fn mat_vec_mul() {
-        let a = Mat::new(vec![
-            vec![1.0, 2.0, 3.0, 2.0],
-            vec![2.0, 1.0, 2.0, 0.0],
-            vec![3.0, 0.0, 1.0, 2.0],
+        let a = Mat::new(&[
+            &[1.0, 2.0, 3.0, 2.0],
+            &[2.0, 1.0, 2.0, 0.0],
+            &[3.0, 0.0, 1.0, 2.0],
         ]);
         let b: Vec<f32> = Vec::from([1.0, 2.0, 3.0, 4.0]);
         let c: Vec<f32> = Vec::from([22.0, 10.0, 14.0]);
