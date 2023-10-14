@@ -1,5 +1,7 @@
 use crate::camera::get_default_camera_transform;
+use crate::impl_default;
 use crate::ncube::NCube as InnerNCube;
+use crate::resources::SIZE;
 use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubeEdgeColor;
@@ -10,7 +12,6 @@ use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
 use crate::NCubeUnlit;
 use crate::NCubeVertices3D;
-use crate::S;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 
@@ -29,16 +30,14 @@ struct CameraTransform {
     rotation: Quat,
     scale: Vec3,
 }
-impl std::default::Default for CameraTransform {
-    fn default() -> Self {
-        let transform = get_default_camera_transform();
-        Self {
-            translation: transform.translation,
-            rotation: transform.rotation,
-            scale: transform.scale,
-        }
+impl_default!(CameraTransform => {
+    let transform = get_default_camera_transform();
+    Self {
+        translation: transform.translation,
+        rotation: transform.rotation,
+        scale: transform.scale,
     }
-}
+});
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct NCubeData {
@@ -228,7 +227,7 @@ fn info_panel(
                                             **ncube_face_color = data.face_color;
                                             **ncube_unlit = data.unlit;
                                             **ncube_dimension = data.dimension;
-                                            **ncube = InnerNCube::new(**ncube_dimension, S);
+                                            **ncube = InnerNCube::new(**ncube_dimension, SIZE);
                                             **ncube_rotations = std::collections::HashMap::new();
                                             **ncube_planes_of_rotation = Vec::new();
                                             let mut angles = Vec::new();

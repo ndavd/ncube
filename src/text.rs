@@ -54,8 +54,9 @@ fn spawn_title_text(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
     commands.spawn(TextBundle {
         text: Text::from_section(
             format!(
-                "{} - {}\n{}",
+                "{} v{} - {}\n{}",
                 env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
                 env!("CARGO_PKG_DESCRIPTION"),
                 env!("CARGO_PKG_AUTHORS"),
             ),

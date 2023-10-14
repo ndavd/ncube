@@ -1,33 +1,34 @@
+mod camera;
+mod edge;
+mod mat;
+mod ncube;
+mod resources;
+mod settings;
+mod text;
+mod vec;
+
 use crate::ncube::ExtendedMathOps;
 use crate::vec::TriangleNormal;
 use bevy::pbr::AlphaMode;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
+use resources::NCube;
+use resources::NCubeDimension;
+use resources::NCubeEdgeColor;
+use resources::NCubeEdgeThickness;
+use resources::NCubeFaceColor;
+use resources::NCubeIsPaused;
+use resources::NCubePlanesOfRotation;
+use resources::NCubeRotations;
+use resources::NCubeUnlit;
+use resources::NCubeVertices3D;
 use std::collections::HashMap;
-mod camera;
-mod edge;
-mod mat;
-mod ncube;
-mod settings;
-mod text;
-mod vec;
-
-pub const S: f32 = 1.0;
 
 fn main() {
     App::new()
-        .init_resource::<NCubeDimension>()
-        .init_resource::<NCube>()
-        .init_resource::<NCubeVertices3D>()
-        .init_resource::<NCubePlanesOfRotation>()
-        .init_resource::<NCubeRotations>()
-        .init_resource::<NCubeIsPaused>()
-        .init_resource::<NCubeEdgeColor>()
-        .init_resource::<NCubeFaceColor>()
-        .init_resource::<NCubeEdgeThickness>()
-        .init_resource::<NCubeUnlit>()
         .add_plugins((
             DefaultPlugins,
+            resources::ResourcesPlugin,
             camera::CameraPlugin,
             settings::SettingsPlugin,
             text::TextPlugin,
@@ -50,99 +51,6 @@ struct Edge;
 struct Face;
 #[derive(Component)]
 struct NCubeMesh;
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeDimension(usize);
-impl std::default::Default for NCubeDimension {
-    fn default() -> Self {
-        Self(5)
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCube(ncube::NCube);
-impl std::default::Default for NCube {
-    fn default() -> Self {
-        let d = NCubeDimension::default();
-        Self(ncube::NCube::new(*d, S))
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeVertices3D(Vec<Vec3>);
-impl std::default::Default for NCubeVertices3D {
-    fn default() -> Self {
-        let ncube = NCube::default();
-        Self(ncube.perspective_project_vertices())
-    }
-}
-
-/// Dimension indices
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubePlanesOfRotation(Vec<(usize, usize)>);
-impl std::default::Default for NCubePlanesOfRotation {
-    fn default() -> Self {
-        let d = NCubeDimension::default();
-        Self(usize::pair_permutations(0, *d - 1))
-    }
-}
-
-/// k: Plane
-/// v: Angle, angular velocity
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeRotations(std::collections::HashMap<(usize, usize), (f32, f32)>);
-impl std::default::Default for NCubeRotations {
-    fn default() -> Self {
-        let planes_of_rotation = NCubePlanesOfRotation::default();
-        let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
-        for plane in &*planes_of_rotation {
-            rotations.insert(*plane, (0.0_f32, 0.0_f32));
-        }
-        rotations.insert((1, 2), (0.0, 1.0));
-        rotations.insert((0, 3), (0.0, 0.5));
-        Self(rotations)
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeIsPaused(bool);
-impl std::default::Default for NCubeIsPaused {
-    fn default() -> Self {
-        Self(false)
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeEdgeColor(Color);
-impl std::default::Default for NCubeEdgeColor {
-    fn default() -> Self {
-        Self(Color::CYAN)
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeFaceColor(Color);
-impl std::default::Default for NCubeFaceColor {
-    fn default() -> Self {
-        Self(Color::CYAN.with_a(0.1))
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeEdgeThickness(f32);
-impl std::default::Default for NCubeEdgeThickness {
-    fn default() -> Self {
-        Self(0.01)
-    }
-}
-
-#[derive(Resource, Deref, DerefMut)]
-pub struct NCubeUnlit(bool);
-impl std::default::Default for NCubeUnlit {
-    fn default() -> Self {
-        Self(false)
-    }
-}
 
 fn spawn_hypercube(
     mut commands: Commands,
