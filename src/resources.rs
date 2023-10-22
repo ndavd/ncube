@@ -1,7 +1,7 @@
-use bevy::prelude::*;
-use std::collections::HashMap;
 use crate::ncube;
 use crate::ncube::ExtendedMathOps;
+use bevy::prelude::*;
+use std::collections::HashMap;
 
 pub struct ResourcesPlugin;
 
