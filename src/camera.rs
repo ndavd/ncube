@@ -75,7 +75,7 @@ fn update_camera(
     window.cursor.visible = false;
 
     let curr_pos_spherical = camera_transform.translation.to_spherical();
-    mouse_wheel_events.iter().for_each(|event| {
+    mouse_wheel_events.read().for_each(|event| {
         if event.y == 0.0 {
             return;
         }
@@ -85,7 +85,7 @@ fn update_camera(
             curr_pos_spherical.phi,
         ));
     });
-    mouse_motion_events.iter().for_each(|event| {
+    mouse_motion_events.read().for_each(|event| {
         if event.delta.length() == 0.0 {
             return;
         }
