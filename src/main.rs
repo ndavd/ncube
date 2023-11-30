@@ -26,8 +26,17 @@ use std::collections::HashMap;
 
 fn main() {
     App::new()
+        .add_plugins(DefaultPlugins.build().set(WindowPlugin {
+            primary_window: Some(Window {
+                title: env!("CARGO_PKG_NAME").to_string(),
+                #[cfg(target_family = "wasm")]
+                canvas: Some(String::from("#bevy")),
+                fit_canvas_to_parent: true,
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins((
-            DefaultPlugins,
             resources::ResourcesPlugin,
             camera::CameraPlugin,
             settings::SettingsPlugin,

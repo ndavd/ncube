@@ -1,93 +1,68 @@
 name: Release
-
 on:
   push:
     tags:
       - '*'
-
 env:
   binary: ncube
-
 jobs:
   # Publish on crates.io
   publish-to-crates:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-
       - name: Cache toolchain
         uses: Swatinem/rust-cache@v2
-
       - name: Install dependencies
         run: |
           sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
-
       - name: Publish to crates.io
         run: cargo publish
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
   # Build for wasm
   release-wasm:
     runs-on: ubuntu-latest
-
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-
       - name: Checkout sources
         uses: actions/checkout@v4
-
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-
       - name: Cache toolchain
         uses: Swatinem/rust-cache@v2
-
       - name: Install dependencies
         run: |
           sudo apt-get update; sudo apt-get install binutils
-
       - name: Install wasm-bindgen-cli
         run: |
           cargo install wasm-bindgen-cli
-
       - name: Build
         run: |
-          cargo build --release --target wasm32-unknown-unknown
-
-      - name: Strip binary
-        run: |
-          strip target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
-
+          cargo build --profile tiny --target wasm32-unknown-unknown
       - name: Prepare package
         run: |
-          wasm-bindgen --no-typescript --out-name bevy_game --out-dir wasm --target web target/wasm32-unknown-unknown/release/${{ env.binary }}.wasm
-          cp -r assets wasm/
-
+          wasm-bindgen --no-typescript --out-name ncube --out-dir wasm --target web target/wasm32-unknown-unknown/tiny/${{ env.binary }}.wasm
       - name: Package as a zip
         working-directory: ./wasm
         run: |
           zip --recurse-paths ../${{ env.binary }}.zip .
-
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.binary }}.zip
           name: wasm
           retention-days: 1
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -96,50 +71,39 @@ jobs:
           asset_name: wasm.zip
           tag: ${{ github.ref }}
           overwrite: true
-
   # Linux
   release-linux:
     runs-on: ubuntu-latest
-
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-
       - name: Checkout sources
         uses: actions/checkout@v3
-
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu
-
       - name: Cache toolchain
         uses: Swatinem/rust-cache@v2
-
       - name: Install dependencies
         run: |
           sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
-
       - name: Build
         run: |
           cargo build --release --target x86_64-unknown-linux-gnu
-
       - name: Prepare package
         run: |
           mkdir linux
           cp target/x86_64-unknown-linux-gnu/release/${{ env.binary }} linux/
-
       - name: Package as a zip
         working-directory: ./linux
         run: |
           zip --recurse-paths ../${{ env.binary }}.zip .
-
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.binary }}.zip
           name: linux
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -148,42 +112,33 @@ jobs:
           asset_name: ${{ env.binary }}-linux-${{ steps.get_version.outputs.tag }}.zip
           tag: ${{ github.ref }}
           overwrite: true
-
   # Publish for Windows
   release-windows:
     runs-on: windows-latest
-
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-
       - name: Checkout sources
         uses: actions/checkout@v3
-
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-
       - name: Build
         run: |
           cargo build --release --target x86_64-pc-windows-msvc
-
       - name: Prepare package
         run: |
           mkdir windows
           cp target/x86_64-pc-windows-msvc/release/${{ env.binary }}.exe windows/
-
       - name: Package as a zip
         run: |
           Compress-Archive -Path windows/* -DestinationPath ${{ env.binary }}.zip
-
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.binary }}.zip
           name: windows
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -192,44 +147,35 @@ jobs:
           asset_name: ${{ env.binary }}-windows-${{ steps.get_version.outputs.tag }}.zip
           tag: ${{ github.ref }}
           overwrite: true
-
   # Publish for macOS
   release-macos:
     runs-on: macOS-latest
-
     steps:
       - uses: olegtarasov/get-tag@v2.1.2
         id: get_version
-
       - name: Checkout sources
         uses: actions/checkout@v3
-
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-apple-darwin
-
       - name: Setup environment
         run: |
           export CFLAGS="-fno-stack-check"
           export MACOSX_DEPLOYMENT_TARGET="10.9"
-
       - name: Build
         run: |
           cargo build --release --target x86_64-apple-darwin
-
       - name: Prepare package
         run: |
           mkdir -p ${{ env.binary }}.app/Contents/MacOS
           cp target/x86_64-apple-darwin/release/${{ env.binary }} ${{ env.binary }}.app/Contents/MacOS/
           hdiutil create -fs HFS+ -volname "${{ env.binary }}" -srcfolder ${{ env.binary }}.app ${{ env.binary }}.dmg
-
       - name: Upload binaries to artifacts
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.binary }}.dmg
           name: mac
-
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:

@@ -15,14 +15,20 @@ use crate::NCubeVertices3D;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use egui::Ui;
-use egui_file::FileDialog;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    fn get_drag_drop_data() -> Option<String>;
+    fn export_to_data_file(dimension: usize, data: String);
+}
 
 pub struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<IsHoveringFile>()
-            .init_resource::<Dialog>()
+            .init_resource::<FileDialog>()
             .add_plugins(EguiPlugin)
             .add_systems(Update, info_panel);
     }
@@ -62,8 +68,12 @@ struct NCubeData {
 #[derive(Resource, Deref, DerefMut, Default)]
 struct IsHoveringFile(bool);
 
+#[cfg(not(target_family = "wasm"))]
 #[derive(Resource, Deref, DerefMut, Default)]
-struct Dialog(Option<egui_file::FileDialog>);
+struct FileDialog(Option<egui_file::FileDialog>);
+#[cfg(target_family = "wasm")]
+#[derive(Resource, Deref, DerefMut, Default)]
+struct FileDialog(());
 
 fn info_panel(
     mut ncube_dimension: ResMut<NCubeDimension>,
@@ -80,7 +90,7 @@ fn info_panel(
     mut q_camera_transform: Query<&mut Transform, With<Camera>>,
     mut drag_drop_event: EventReader<FileDragAndDrop>,
     mut is_hovering_file: ResMut<IsHoveringFile>,
-    mut dialog: ResMut<Dialog>,
+    mut dialog: ResMut<FileDialog>,
 ) {
     let context = contexts.ctx_mut();
     egui::Window::new("settings")
@@ -131,7 +141,7 @@ fn render_ui(
     q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
-    dialog: &mut ResMut<Dialog>,
+    file_dialog: &mut ResMut<FileDialog>,
 ) {
     render_dimensions(ui, ncube_dimension);
     render_ncube_info(
@@ -160,7 +170,7 @@ fn render_ui(
     render_export_data_file(
         ui,
         context,
-        dialog,
+        file_dialog,
         ncube_dimension,
         q_camera_transform,
         ncube_rotations,
@@ -298,8 +308,8 @@ fn render_reset(
 
 fn render_export_data_file(
     ui: &mut Ui,
-    context: &mut egui::Context,
-    dialog: &mut ResMut<Dialog>,
+    _context: &mut egui::Context,
+    _file_dialog: &mut ResMut<FileDialog>,
     ncube_dimension: &mut ResMut<NCubeDimension>,
     q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
@@ -308,45 +318,6 @@ fn render_export_data_file(
     ncube_edge_thickness: &mut ResMut<NCubeEdgeThickness>,
     ncube_unlit: &mut ResMut<NCubeUnlit>,
 ) {
-    if ui.button("export to data file").clicked() {
-        let mut d = FileDialog::select_folder(home::home_dir())
-            .title(format!("select folder to save data file").as_str());
-        d.open();
-        ***dialog = Some(d);
-    }
-
-    let d = match &mut ***dialog {
-        Some(v) => {
-            v.show(context);
-            if !v.selected() {
-                return;
-            }
-            v
-        }
-        None => {
-            return;
-        }
-    };
-
-    let file_name = format!(
-        "{}cube-{}.data",
-        ***ncube_dimension,
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-    );
-
-    let mut file = match d
-        .path()
-        .and_then(|file_path| std::fs::File::create(file_path.join(file_name)).ok())
-    {
-        Some(v) => v,
-        None => {
-            return;
-        }
-    };
-
     let camera_transform = *q_camera_transform.get_single().unwrap();
     let ncube_data = NCubeData {
         dimension: ***ncube_dimension,
@@ -364,7 +335,57 @@ fn render_export_data_file(
         },
         unlit: ***ncube_unlit,
     };
-    serde_json::to_writer_pretty(&mut file, &ncube_data).unwrap_or_else(|_| {});
+
+    if ui.button("export to data file").clicked() {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let mut dialog = egui_file::FileDialog::select_folder(home::home_dir())
+                .title(format!("select folder to save data file").as_str());
+            dialog.open();
+            ***_file_dialog = Some(dialog);
+        }
+        #[cfg(target_family = "wasm")]
+        if let Ok(data) = serde_json::to_string(&ncube_data) {
+            export_to_data_file(***ncube_dimension, data);
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let dialog = match &mut ***_file_dialog {
+            Some(v) => {
+                v.show(_context);
+                if !v.selected() {
+                    return;
+                }
+                v
+            }
+            None => {
+                return;
+            }
+        };
+
+        let file_name = format!(
+            "{}cube-{}.data",
+            ***ncube_dimension,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+
+        let mut file = match dialog
+            .path()
+            .and_then(|file_path| std::fs::File::create(file_path.join(file_name)).ok())
+        {
+            Some(v) => v,
+            None => {
+                return;
+            }
+        };
+
+        serde_json::to_writer_pretty(&mut file, &ncube_data).unwrap_or_else(|_| {});
+    }
 }
 
 fn render_drop_data_file(
@@ -383,6 +404,32 @@ fn render_drop_data_file(
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
 ) {
+    let mut handle_ncube_data = |data: NCubeData| {
+        *q_camera_transform.get_single_mut().unwrap() = Transform {
+            translation: data.camera_transform.translation,
+            scale: data.camera_transform.scale,
+            rotation: data.camera_transform.rotation,
+        };
+        ***ncube_is_paused = true;
+        ***ncube_edge_thickness = data.edge_thickness;
+        ***ncube_edge_color = data.edge_color;
+        ***ncube_face_color = data.face_color;
+        ***ncube_unlit = data.unlit;
+        ***ncube_dimension = data.dimension;
+        ***ncube = InnerNCube::new(***ncube_dimension, SIZE);
+        ***ncube_rotations = std::collections::HashMap::new();
+        ***ncube_planes_of_rotation = Vec::new();
+        let mut angles = Vec::new();
+        for (d1, d2, angle, vel) in data.rotations {
+            ncube_rotations.insert((d1, d2), (angle, vel));
+            ncube_planes_of_rotation.push((d1, d2));
+            angles.push(angle);
+        }
+        ***ncube_vertices_3d = ncube
+            .rotate(&ncube_planes_of_rotation, &angles)
+            .perspective_project_vertices();
+    };
+
     ui.colored_label(
         if ***is_hovering_file {
             egui::Color32::GREEN
@@ -392,6 +439,16 @@ fn render_drop_data_file(
         "drop data file",
     );
     ui.end_row();
+
+    if cfg!(target_family = "wasm") {
+        if let Some(data_str) = get_drag_drop_data() {
+            match serde_json::from_str::<NCubeData>(&data_str) {
+                Ok(data) => handle_ncube_data(data),
+                Err(e) => eprintln!("ERR {e}"),
+            }
+        }
+        return;
+    }
 
     let event = match drag_drop_event.read().nth(0) {
         Some(v) => v,
@@ -408,32 +465,8 @@ fn render_drop_data_file(
             let file = std::fs::File::open(&path_buf).unwrap();
             let reader = std::io::BufReader::new(file);
             match serde_json::from_reader::<_, NCubeData>(reader) {
-                Ok(data) => {
-                    *q_camera_transform.get_single_mut().unwrap() = Transform {
-                        translation: data.camera_transform.translation,
-                        scale: data.camera_transform.scale,
-                        rotation: data.camera_transform.rotation,
-                    };
-                    ***ncube_is_paused = true;
-                    ***ncube_edge_thickness = data.edge_thickness;
-                    ***ncube_edge_color = data.edge_color;
-                    ***ncube_face_color = data.face_color;
-                    ***ncube_unlit = data.unlit;
-                    ***ncube_dimension = data.dimension;
-                    ***ncube = InnerNCube::new(***ncube_dimension, SIZE);
-                    ***ncube_rotations = std::collections::HashMap::new();
-                    ***ncube_planes_of_rotation = Vec::new();
-                    let mut angles = Vec::new();
-                    for (d1, d2, angle, vel) in data.rotations {
-                        ncube_rotations.insert((d1, d2), (angle, vel));
-                        ncube_planes_of_rotation.push((d1, d2));
-                        angles.push(angle);
-                    }
-                    ***ncube_vertices_3d = ncube
-                        .rotate(&ncube_planes_of_rotation, &angles)
-                        .perspective_project_vertices();
-                }
-                Err(e) => println!("ERR {e}"),
+                Ok(data) => handle_ncube_data(data),
+                Err(e) => eprintln!("ERR {e}"),
             }
             ***is_hovering_file = false;
         }

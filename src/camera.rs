@@ -11,7 +11,11 @@ impl Plugin for CameraPlugin {
     }
 }
 
-const WHEEL_FACTOR: f32 = 0.3;
+const WHEEL_FACTOR: f32 = if cfg!(target_family = "wasm") {
+    0.001
+} else {
+    0.3
+};
 const MOTION_FACTOR: f32 = 0.3;
 
 pub fn get_default_camera_transform() -> Transform {
