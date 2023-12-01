@@ -62,10 +62,26 @@ fn update_camera(
     mouse_button_input: Res<Input<MouseButton>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
+    keys: Res<Input<KeyCode>>,
     mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let mut camera_transform = q_camera_transform.get_single_mut().unwrap();
     let mut window = q_primary_window.get_single_mut().unwrap();
+
+    let curr_pos_spherical = camera_transform.translation.to_spherical();
+
+    if keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {
+        mouse_wheel_events.read().for_each(|event| {
+            if event.y == 0.0 {
+                return;
+            }
+            camera_transform.translation = Vec3::from_spherical(SphericalCoordinate::new(
+                curr_pos_spherical.r * 1.0 - event.y * WHEEL_FACTOR,
+                curr_pos_spherical.theta,
+                curr_pos_spherical.phi,
+            ));
+        });
+    }
 
     if !mouse_button_input.pressed(MouseButton::Right) {
         if mouse_button_input.just_released(MouseButton::Right) {
@@ -78,17 +94,6 @@ fn update_camera(
 
     window.cursor.visible = false;
 
-    let curr_pos_spherical = camera_transform.translation.to_spherical();
-    mouse_wheel_events.read().for_each(|event| {
-        if event.y == 0.0 {
-            return;
-        }
-        camera_transform.translation = Vec3::from_spherical(SphericalCoordinate::new(
-            curr_pos_spherical.r * 1.0 - event.y * WHEEL_FACTOR,
-            curr_pos_spherical.theta,
-            curr_pos_spherical.phi,
-        ));
-    });
     mouse_motion_events.read().for_each(|event| {
         if event.delta.length() == 0.0 {
             return;

@@ -29,8 +29,9 @@ impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<IsHoveringFile>()
             .init_resource::<FileDialog>()
+            .init_resource::<ShowHelp>()
             .add_plugins(EguiPlugin)
-            .add_systems(Update, info_panel);
+            .add_systems(Update, (info_panel, help_panel));
     }
 }
 
@@ -68,6 +69,9 @@ struct NCubeData {
 #[derive(Resource, Deref, DerefMut, Default)]
 struct IsHoveringFile(bool);
 
+#[derive(Resource, Deref, DerefMut, Default)]
+struct ShowHelp(bool);
+
 #[cfg(not(target_family = "wasm"))]
 #[derive(Resource, Deref, DerefMut, Default)]
 struct FileDialog(Option<egui_file::FileDialog>);
@@ -76,6 +80,7 @@ struct FileDialog(Option<egui_file::FileDialog>);
 struct FileDialog(());
 
 fn info_panel(
+    mut show_help: ResMut<ShowHelp>,
     mut ncube_dimension: ResMut<NCubeDimension>,
     mut ncube: ResMut<NCube>,
     mut ncube_rotations: ResMut<NCubeRotations>,
@@ -105,6 +110,7 @@ fn info_panel(
                         render_ui(
                             ui,
                             context,
+                            &mut show_help,
                             &mut ncube_dimension,
                             &mut ncube,
                             &mut ncube_rotations,
@@ -125,9 +131,52 @@ fn info_panel(
         });
 }
 
+fn help_panel(mut contexts: EguiContexts, mut show_help: ResMut<ShowHelp>) {
+    egui::Window::new("help")
+        .open(&mut show_help)
+        .vscroll(false)
+        .resizable(true)
+        .show(&contexts.ctx_mut(), |ui| {
+            ui.heading("controls");
+            ui.separator();
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::Grid::new("help-grid")
+                    .num_columns(2)
+                    .spacing([40.0, 0.0])
+                    .striped(true)
+                    .show(ui, |ui| {
+                        let mono = |ui: &mut Ui, text: &str| {
+                            ui.label(
+                                egui::RichText::new(text)
+                                    .monospace()
+                                    .color(egui::Color32::LIGHT_BLUE),
+                            )
+                        };
+
+                        ui.label("load data file");
+                        mono(ui, "drag and drop file");
+                        ui.end_row();
+
+                        ui.label("pause");
+                        mono(ui, "space");
+                        ui.end_row();
+
+                        ui.label("rotate");
+                        mono(ui, "hold right mouse button + move");
+                        ui.end_row();
+
+                        ui.label("zoom");
+                        mono(ui, "hold control + scroll");
+                        ui.end_row();
+                    })
+            })
+        });
+}
+
 fn render_ui(
     ui: &mut Ui,
     context: &mut egui::Context,
+    show_help: &mut ResMut<ShowHelp>,
     ncube_dimension: &mut ResMut<NCubeDimension>,
     ncube: &mut ResMut<NCube>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
@@ -143,20 +192,9 @@ fn render_ui(
     is_hovering_file: &mut ResMut<IsHoveringFile>,
     file_dialog: &mut ResMut<FileDialog>,
 ) {
-    render_dimensions(ui, ncube_dimension);
-    render_ncube_info(
+    render_help_and_reset(
         ui,
-        ncube.vertices.0.len(),
-        ncube.edges.0.len(),
-        ncube.faces.0.len() / 2,
-    );
-    render_lighting(ui, ncube_unlit);
-    render_edge_thickness(ui, ncube_edge_thickness);
-    render_edge_color(ui, ncube_edge_color);
-    render_face_color(ui, ncube_face_color);
-    render_planes_of_rotation(ui, ncube_rotations, ncube_planes_of_rotation);
-    render_reset(
-        ui,
+        show_help,
         ncube_dimension,
         ncube,
         ncube_rotations,
@@ -195,6 +233,18 @@ fn render_ui(
         drag_drop_event,
         is_hovering_file,
     );
+    render_dimensions(ui, ncube_dimension);
+    render_ncube_info(
+        ui,
+        ncube.vertices.0.len(),
+        ncube.edges.0.len(),
+        ncube.faces.0.len() / 2,
+    );
+    render_lighting(ui, ncube_unlit);
+    render_edge_thickness(ui, ncube_edge_thickness);
+    render_edge_color(ui, ncube_edge_color);
+    render_face_color(ui, ncube_face_color);
+    render_planes_of_rotation(ui, ncube_rotations, ncube_planes_of_rotation);
 }
 
 macro_rules! render_row {
@@ -270,15 +320,16 @@ fn render_planes_of_rotation(
         let plane = ncube_planes_of_rotation[i];
         let (angle, vel) = *ncube_rotations.get(&plane).unwrap();
         let mut tmp = vel;
-        render_row!(format!("q{}q{} w:", plane.0 + 1, plane.1 + 1), ui => {
+        render_row!(format!("q{}q{} w", plane.0 + 1, plane.1 + 1), ui => {
             ui.add(egui::Slider::new(&mut tmp, -3.0..=3.0));
         });
         ncube_rotations.insert(plane, (angle, tmp));
     }
 }
 
-fn render_reset(
+fn render_help_and_reset(
     ui: &mut Ui,
+    show_help: &mut ResMut<ShowHelp>,
     ncube_dimension: &mut ResMut<NCubeDimension>,
     ncube: &mut ResMut<NCube>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
@@ -289,19 +340,27 @@ fn render_reset(
     ncube_is_paused: &mut ResMut<NCubeIsPaused>,
     q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
 ) {
-    if ui.button("reset").clicked() {
-        **ncube_dimension = NCubeDimension::default();
-        **ncube = NCube::default();
-        **ncube_planes_of_rotation = NCubePlanesOfRotation::default();
-        **ncube_rotations = NCubeRotations::default();
-        *q_camera_transform.get_single_mut().unwrap() =
-            crate::camera::get_default_camera_transform();
-        **ncube_edge_thickness = NCubeEdgeThickness::default();
-        **ncube_face_color = NCubeFaceColor::default();
-        **ncube_edge_color = NCubeEdgeColor::default();
-    }
+    ui.scope(|ui| {
+        ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
+        if ui.button("help").clicked() {
+            ***show_help = true;
+        }
+        if ui.button("reset").clicked() {
+            **ncube_dimension = NCubeDimension::default();
+            **ncube = NCube::default();
+            **ncube_planes_of_rotation = NCubePlanesOfRotation::default();
+            **ncube_rotations = NCubeRotations::default();
+            *q_camera_transform.get_single_mut().unwrap() =
+                crate::camera::get_default_camera_transform();
+            **ncube_edge_thickness = NCubeEdgeThickness::default();
+            **ncube_face_color = NCubeFaceColor::default();
+            **ncube_edge_color = NCubeEdgeColor::default();
+        }
+    });
     if ***ncube_is_paused {
         ui.colored_label(egui::Color32::RED, "paused");
+    } else {
+        ui.colored_label(egui::Color32::GREEN, "running");
     }
     ui.end_row();
 }
