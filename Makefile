@@ -1,6 +1,10 @@
 CC=cargo b
 
-default: FORCE
+default: native
+
+all: native web
+
+native: FORCE
 	$(CC) --release
 
 web: FORCE
