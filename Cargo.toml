@@ -1,13 +1,13 @@
 [package]
 name = "ncube"
-version = "1.2.3"
+version = "2.0.0"
 edition = "2021"
 authors = ["Nuno David <email@ndavd.com>"]
 license = "MIT"
 description = "Generalized Hypercube Visualizer"
 readme = ".github/README.md"
 repository = "https://github.com/ndavd/ncube"
-exclude = [".github/*.gif", ".github/workflows"]
+exclude = [".github/*.gif", ".github/workflows", "web"]
 keywords = ["simulation", "hypercube", "bevy", "mathematics", "tesseract"]
 categories = ["simulation", "mathematics", "visualization", "graphics"]
 
