@@ -4,6 +4,7 @@
   // Alternatively, we could always set "module" to "Node16" and add the file extension .js to import paths everywhere.
   "compilerOptions": {
     "module": "Node16",
-    "moduleResolution": "Node16"
+    "moduleResolution": "Node16",
+    "allowJs": true
   }
 }

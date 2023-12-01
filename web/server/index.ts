@@ -15,12 +15,11 @@ import compression from 'compression'
 import express from 'express'
 import { renderPage } from 'vike/server'
 
+import { fetchLatestRelease } from '../api/ssr.js'
 import { root } from './root.js'
 const isProduction = process.env.NODE_ENV === 'production'
 
-startServer()
-
-async function startServer() {
+const startServer = async () => {
   const app = express()
 
   app.use(compression())
@@ -47,9 +46,7 @@ async function startServer() {
 
   app.get('/latest-release', async (_, res) => {
     try {
-      const wasmZip = await fetch('https://github.com/ndavd/ncube/releases/latest/download/wasm.zip')
-      const wasmZipBlob = await wasmZip.blob()
-      return res.send(Buffer.from(await wasmZipBlob.arrayBuffer()))
+      return res.send(await fetchLatestRelease())
     } catch (e) {
       console.error(e)
       res.status(500)
@@ -80,3 +77,5 @@ async function startServer() {
   app.listen(port)
   console.log(`Server running at http://localhost:${port}`)
 }
+
+startServer()
