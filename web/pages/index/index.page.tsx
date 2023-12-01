@@ -1,5 +1,6 @@
-import JSZip from 'jszip'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+
+import ncube from '../../renderer/ncube'
 
 declare global {
   interface Window {
@@ -27,44 +28,16 @@ const export_to_data_file = (dimension: number, data: string) => {
 const LATEST_RELEASE_URL = 'https://github.com/ndavd/ncube/releases/latest'
 const GITHUB_URL = 'https://github.com/ndavd/ncube'
 
-enum STATE {
-  FETCHING_BINARY,
-  LOADING_APP,
-  LOADED,
-}
-
-const zip = new JSZip()
-
 export const Page = () => {
-  const [appState, setAppState] = useState(STATE.FETCHING_BINARY)
+  const [hasLoaded, setHasLoaded] = useState(false)
   const [isHovering, setIsHovering] = useState(false)
   const [dragDropData, setDragDropData] = useState<string | null>(null)
   const [hasNotification, setHasNotification] = useState(false)
 
-  const isLoading = appState == STATE.LOADING_APP
-  const hasLoaded = appState == STATE.LOADED
-  const setLoaded = () => setAppState(STATE.LOADED)
-  const setLoading = () => setAppState(STATE.LOADING_APP)
+  const setLoaded = () => setHasLoaded(true)
 
-  const handleFetch = useCallback(async () => {
-    const res = await fetch('/latest-release', {
-      headers: { Accept: 'application/octet-stream' },
-    })
-    const wasmZipBlob = await res.blob()
-    setLoading()
-    const wasmZip = await zip.loadAsync(wasmZipBlob)
-    const js = await wasmZip.files['ncube.js'].async('text')
-    const wasm = await wasmZip.files['ncube_bg.wasm'].async('uint8array')
-    const jsURL = URL.createObjectURL(
-      new Blob([js], { type: 'application/javascript' }),
-    )
-    const wasmURL = URL.createObjectURL(
-      new Blob([wasm], { type: 'application/wasm' }),
-    )
-    const jsModule = await import(/* @vite-ignore */ jsURL)
-
-    jsModule
-      .default(wasmURL)
+  useEffect(() => {
+    ncube()
       .then(setLoaded)
       .catch((error: Error) => {
         if (
@@ -78,10 +51,6 @@ export const Page = () => {
         throw error
       })
   }, [])
-
-  useEffect(() => {
-    handleFetch()
-  }, [handleFetch])
 
   useEffect(() => {
     if (!hasLoaded) return
@@ -118,9 +87,6 @@ export const Page = () => {
     setDragDropData(await dataFile.text())
   }
 
-  const renderOK = (text: string) => (
-    <div className="inline text-green">{text}</div>
-  )
   const renderWarning = (text: string) => (
     <div className="inline font-bold text-primary">{text}</div>
   )
@@ -152,13 +118,8 @@ export const Page = () => {
       <br />
       <div>-- ncube --</div>
       <br />
-      <div>Fetching latest release... {isLoading && renderOK('DONE')}</div>
-      {isLoading && (
-        <>
-          <div>Entering n-dimensional space...</div>
-          {renderWarning('Brace yourself.')}
-        </>
-      )}
+      <div>Entering n-dimensional space...</div>
+      {renderWarning('Brace yourself.')}
     </div>
   )
 

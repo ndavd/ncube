@@ -15,7 +15,6 @@ import compression from 'compression'
 import express from 'express'
 import { renderPage } from 'vike/server'
 
-import { fetchLatestRelease } from '../api/ssr.js'
 import { root } from './root.js'
 const isProduction = process.env.NODE_ENV === 'production'
 
@@ -43,15 +42,6 @@ const startServer = async () => {
     ).middlewares
     app.use(viteDevMiddleware)
   }
-
-  app.get('/latest-release', async (_, res) => {
-    try {
-      return res.send(await fetchLatestRelease())
-    } catch (e) {
-      console.error(e)
-      res.status(500)
-    }
-  })
 
   // Vike middleware. It should always be our last middleware (because it's a
   // catch-all middleware superseding any middleware placed after it).
