@@ -10,8 +10,19 @@ is generated in real time just from the dimension number.**
   <img align="center" width="200px" src='https://raw.githubusercontent.com/ndavd/ncube/main/.github/Penteract-q1q4-q3q5.gif' />
   <img align="center" width="200px" src='https://raw.githubusercontent.com/ndavd/ncube/main/.github/Hexeract-q1q4-q2q5-q3q6.gif' />
 </div>
+<br/>
 
-### Features
+- [Features](#features)
+- [But what am I actually visualizing?](#but-what-am-i-actually-visualizing)
+- [Web](#web)
+- [Installation](#installation)
+  - [Download the pre-built binaries](#download-the-pre-built-binaries)
+  - [Install from crates.io](#install-from-cratesio)
+  - [Install from source](#install-from-source)
+  - [Uninstall](#uninstall)
+- [Contributing](#contributing)
+
+## Features
 
 - Real time control of the simulation, such as tweaking the angular velocity
   factor of any plane of rotation
@@ -99,3 +110,12 @@ cargo install --path .
 ```
 cargo uninstall ncube
 ```
+
+## Contributing
+
+Contributions are very welcome! Those being pull requests, issues or even ideas.
+
+- If you have an idea or question feel free to create a discussion in the
+  [discussions page](https://github.com/ndavd/ncube/discussions)
+- If you'd like to showcase your findings there's
+  [community showcase](https://github.com/ndavd/ncube/discussions/7)
