@@ -1,0 +1,1 @@
+import{j as r}from"../chunks/chunk-f21bb20a.js";const n=({is404:e})=>{const t=e?"404 Page Not Found":"500 Internal Error";return r.jsx("div",{className:"flex h-screen items-center justify-center text-xl",children:t})};export{n as Page};
