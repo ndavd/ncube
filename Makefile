@@ -13,14 +13,9 @@ web: FORCE
 		--target wasm32-unknown-unknown
 	wasm-bindgen \
 		--out-name ncube \
-		--out-dir	wasm \
+		--out-dir	web/wasm \
 		--target web \
 		target/wasm32-unknown-unknown/tiny/ncube.wasm
-	zip \
-		-j \
-		web/public/ncube.zip \
-		wasm/*
-	rm -r wasm
 
 clean: FORCE
 	-rm -r target
