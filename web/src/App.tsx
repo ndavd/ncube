@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-
 import ncube from '../wasm/ncube'
 
 declare global {

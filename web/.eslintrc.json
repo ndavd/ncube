@@ -22,12 +22,9 @@
   "plugins": [
     "react",
     "react-refresh",
-    "@typescript-eslint",
-    "simple-import-sort"
+    "@typescript-eslint"
   ],
   "rules": {
-    "simple-import-sort/imports": "error",
-    "simple-import-sort/exports": "error",
     "react/react-in-jsx-scope": 0,
     "react-refresh/only-export-components": [
       "warn",
