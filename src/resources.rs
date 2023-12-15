@@ -16,7 +16,10 @@ impl Plugin for ResourcesPlugin {
             .init_resource::<NCubeEdgeColor>()
             .init_resource::<NCubeFaceColor>()
             .init_resource::<NCubeEdgeThickness>()
-            .init_resource::<NCubeUnlit>();
+            .init_resource::<NCubeUnlit>()
+            .init_resource::<IsHoveringFile>()
+            .init_resource::<FileDialog>()
+            .init_resource::<ShowControls>();
     }
 }
 
@@ -91,3 +94,12 @@ create_resource!(NCubeFaceColor(Color) => Self(Color::CYAN.with_a(0.1)));
 create_resource!(NCubeEdgeThickness(f32) => Self(0.01));
 
 create_resource!(NCubeUnlit(bool) => Self(false));
+
+create_resource!(IsHoveringFile(bool) => Self(false));
+
+#[cfg(not(target_family = "wasm"))]
+create_resource!(FileDialog(Option<egui_file::FileDialog>) => Self(None));
+#[cfg(target_family = "wasm")]
+create_resource!(FileDialog(()) => Self(()));
+
+create_resource!(ShowControls(bool) => Self(false));

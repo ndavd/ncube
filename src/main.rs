@@ -9,19 +9,14 @@ mod vec;
 
 use crate::ncube::ExtendedMathOps;
 use crate::vec::TriangleNormal;
-use bevy::pbr::AlphaMode;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
-use resources::NCube;
-use resources::NCubeDimension;
-use resources::NCubeEdgeColor;
-use resources::NCubeEdgeThickness;
-use resources::NCubeFaceColor;
-use resources::NCubeIsPaused;
-use resources::NCubePlanesOfRotation;
-use resources::NCubeRotations;
-use resources::NCubeUnlit;
-use resources::NCubeVertices3D;
+use bevy::window::PrimaryWindow;
+use bevy::{pbr::AlphaMode, window::WindowMode};
+use resources::{
+    NCube, NCubeDimension, NCubeEdgeColor, NCubeEdgeThickness, NCubeFaceColor, NCubeIsPaused,
+    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D,
+};
 use std::collections::HashMap;
 
 fn main() {
@@ -49,6 +44,7 @@ fn main() {
                 rotate_ncube,
                 update_ncube_meshes,
                 update_pause,
+                update_fullscreen,
             ),
         )
         .run();
@@ -267,4 +263,19 @@ fn update_pause(
     if keyboard_input.just_pressed(KeyCode::Space) {
         **ncube_is_paused = !**ncube_is_paused;
     }
+}
+
+fn update_fullscreen(
+    keyboard_input: Res<Input<bevy::input::keyboard::KeyCode>>,
+    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    if !keyboard_input.just_pressed(KeyCode::F) {
+        return;
+    }
+    let mut window = q_primary_window.get_single_mut().unwrap();
+    window.mode = if window.mode == WindowMode::Windowed {
+        WindowMode::BorderlessFullscreen
+    } else {
+        WindowMode::Windowed
+    };
 }

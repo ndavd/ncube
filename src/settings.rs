@@ -1,7 +1,7 @@
 use crate::camera::get_default_camera_transform;
 use crate::impl_default;
 use crate::ncube::NCube as InnerNCube;
-use crate::resources::SIZE;
+use crate::resources::{FileDialog, IsHoveringFile, ShowControls, SIZE};
 use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubeEdgeColor;
@@ -27,11 +27,8 @@ pub struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<IsHoveringFile>()
-            .init_resource::<FileDialog>()
-            .init_resource::<ShowHelp>()
-            .add_plugins(EguiPlugin)
-            .add_systems(Update, (info_panel, help_panel));
+        app.add_plugins(EguiPlugin)
+            .add_systems(Update, (info_panel, controls_panel));
     }
 }
 
@@ -66,21 +63,8 @@ struct NCubeData {
     unlit: bool,
 }
 
-#[derive(Resource, Deref, DerefMut, Default)]
-struct IsHoveringFile(bool);
-
-#[derive(Resource, Deref, DerefMut, Default)]
-struct ShowHelp(bool);
-
-#[cfg(not(target_family = "wasm"))]
-#[derive(Resource, Deref, DerefMut, Default)]
-struct FileDialog(Option<egui_file::FileDialog>);
-#[cfg(target_family = "wasm")]
-#[derive(Resource, Deref, DerefMut, Default)]
-struct FileDialog(());
-
 fn info_panel(
-    mut show_help: ResMut<ShowHelp>,
+    mut show_controls: ResMut<ShowControls>,
     mut ncube_dimension: ResMut<NCubeDimension>,
     mut ncube: ResMut<NCube>,
     mut ncube_rotations: ResMut<NCubeRotations>,
@@ -110,7 +94,7 @@ fn info_panel(
                         render_ui(
                             ui,
                             context,
-                            &mut show_help,
+                            &mut show_controls,
                             &mut ncube_dimension,
                             &mut ncube,
                             &mut ncube_rotations,
@@ -131,16 +115,14 @@ fn info_panel(
         });
 }
 
-fn help_panel(mut contexts: EguiContexts, mut show_help: ResMut<ShowHelp>) {
-    egui::Window::new("help")
-        .open(&mut show_help)
+fn controls_panel(mut contexts: EguiContexts, mut show_controls: ResMut<ShowControls>) {
+    egui::Window::new("controls")
+        .open(&mut show_controls)
         .vscroll(false)
         .resizable(true)
         .show(&contexts.ctx_mut(), |ui| {
-            ui.heading("controls");
-            ui.separator();
             egui::ScrollArea::vertical().show(ui, |ui| {
-                egui::Grid::new("help-grid")
+                egui::Grid::new("controls-grid")
                     .num_columns(2)
                     .spacing([40.0, 0.0])
                     .striped(true)
@@ -168,6 +150,10 @@ fn help_panel(mut contexts: EguiContexts, mut show_help: ResMut<ShowHelp>) {
                         ui.label("zoom");
                         mono(ui, "hold control + scroll");
                         ui.end_row();
+
+                        ui.label("toggle fullscreen");
+                        mono(ui, "F");
+                        ui.end_row();
                     })
             })
         });
@@ -176,7 +162,7 @@ fn help_panel(mut contexts: EguiContexts, mut show_help: ResMut<ShowHelp>) {
 fn render_ui(
     ui: &mut Ui,
     context: &mut egui::Context,
-    show_help: &mut ResMut<ShowHelp>,
+    show_controls: &mut ResMut<ShowControls>,
     ncube_dimension: &mut ResMut<NCubeDimension>,
     ncube: &mut ResMut<NCube>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
@@ -192,9 +178,9 @@ fn render_ui(
     is_hovering_file: &mut ResMut<IsHoveringFile>,
     file_dialog: &mut ResMut<FileDialog>,
 ) {
-    render_help_and_reset(
+    render_controls_and_reset(
         ui,
-        show_help,
+        show_controls,
         ncube_dimension,
         ncube,
         ncube_rotations,
@@ -327,9 +313,9 @@ fn render_planes_of_rotation(
     }
 }
 
-fn render_help_and_reset(
+fn render_controls_and_reset(
     ui: &mut Ui,
-    show_help: &mut ResMut<ShowHelp>,
+    show_controls: &mut ResMut<ShowControls>,
     ncube_dimension: &mut ResMut<NCubeDimension>,
     ncube: &mut ResMut<NCube>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
@@ -342,8 +328,8 @@ fn render_help_and_reset(
 ) {
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
-        if ui.button("help").clicked() {
-            ***show_help = true;
+        if ui.button("controls").clicked() {
+            ***show_controls = true;
         }
         if ui.button("reset").clicked() {
             **ncube_dimension = NCubeDimension::default();
