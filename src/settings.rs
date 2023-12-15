@@ -150,6 +150,10 @@ fn controls_panel(mut contexts: EguiContexts, mut show_controls: ResMut<ShowCont
                         ui.label("zoom");
                         mono(ui, "hold control + scroll");
                         ui.end_row();
+
+                        ui.label("toggle fullscreen");
+                        mono(ui, "F");
+                        ui.end_row();
                     })
             })
         });
