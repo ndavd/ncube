@@ -1,3 +1,4 @@
+use crate::resources::FontHandle;
 use crate::NCubeDimension;
 use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
@@ -17,9 +18,6 @@ impl Plugin for TextPlugin {
 struct TitleText;
 #[derive(Component)]
 struct InfoText;
-
-#[derive(Resource, Deref, DerefMut, Default)]
-pub struct FontHandle(Handle<Font>);
 
 fn spawn_title_text(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
     let font = Vec::from(include_bytes!("../assets/gohufont-14.ttf") as &[u8]);
