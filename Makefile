@@ -1,14 +1,17 @@
-CC=cargo b
+CC=cargo
 
 default: native
 
 all: native web
 
+run: FORCE
+	$(CC) r --release
+
 native: FORCE
-	$(CC) --release
+	$(CC) b --release
 
 web: FORCE
-	$(CC) \
+	$(CC) b \
 		--profile tiny \
 		--target wasm32-unknown-unknown
 	wasm-bindgen \
