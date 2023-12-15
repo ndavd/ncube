@@ -1,5 +1,7 @@
+use crate::resources::OrthographicCamera;
 use crate::vec::{SphericalCoordinate, SphericalCoordinateSystem};
 use bevy::prelude::*;
+use bevy::render::camera::ScalingMode;
 use bevy::window::PrimaryWindow;
 
 pub struct CameraPlugin;
@@ -58,17 +60,29 @@ fn spawn_lighting(mut commands: Commands) {
 }
 
 fn update_camera(
-    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mut q_camera: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
+    mouse_button_input: Res<Input<MouseButton>>,
     keys: Res<Input<KeyCode>>,
-    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
+    orthographic_camera: Res<OrthographicCamera>,
 ) {
-    let mut camera_transform = q_camera_transform.get_single_mut().unwrap();
+    let (mut camera_transform, mut camera_projection) = q_camera.get_single_mut().unwrap();
     let mut window = q_primary_window.get_single_mut().unwrap();
 
     let curr_pos_spherical = camera_transform.translation.to_spherical();
+
+    if orthographic_camera.is_changed() {
+        *camera_projection = if **orthographic_camera {
+            Projection::Orthographic(OrthographicProjection {
+                scaling_mode: ScalingMode::WindowSize(400.0),
+                ..default()
+            })
+        } else {
+            Projection::default()
+        }
+    }
 
     if keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {
         mouse_wheel_events.read().for_each(|event| {

@@ -1,7 +1,7 @@
 use crate::camera::get_default_camera_transform;
 use crate::impl_default;
 use crate::ncube::NCube as InnerNCube;
-use crate::resources::{FileDialog, IsHoveringFile, ShowControls, SIZE};
+use crate::resources::{FileDialog, IsHoveringFile, OrthographicCamera, ShowControls, SIZE};
 use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubeEdgeColor;
@@ -64,22 +64,46 @@ struct NCubeData {
 }
 
 fn info_panel(
-    mut show_controls: ResMut<ShowControls>,
-    mut ncube_dimension: ResMut<NCubeDimension>,
-    mut ncube: ResMut<NCube>,
-    mut ncube_rotations: ResMut<NCubeRotations>,
-    mut ncube_planes_of_rotation: ResMut<NCubePlanesOfRotation>,
-    mut ncube_edge_color: ResMut<NCubeEdgeColor>,
-    mut ncube_face_color: ResMut<NCubeFaceColor>,
-    mut ncube_edge_thickness: ResMut<NCubeEdgeThickness>,
-    mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
-    mut ncube_unlit: ResMut<NCubeUnlit>,
-    mut ncube_is_paused: ResMut<NCubeIsPaused>,
-    mut contexts: EguiContexts,
-    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
-    mut drag_drop_event: EventReader<FileDragAndDrop>,
-    mut is_hovering_file: ResMut<IsHoveringFile>,
-    mut dialog: ResMut<FileDialog>,
+    (
+        mut ncube_dimension,
+        mut ncube,
+        mut ncube_rotations,
+        mut ncube_planes_of_rotation,
+        mut ncube_edge_color,
+        mut ncube_face_color,
+        mut ncube_edge_thickness,
+        mut ncube_vertices_3d,
+        mut ncube_unlit,
+        mut ncube_is_paused,
+    ): (
+        ResMut<NCubeDimension>,
+        ResMut<NCube>,
+        ResMut<NCubeRotations>,
+        ResMut<NCubePlanesOfRotation>,
+        ResMut<NCubeEdgeColor>,
+        ResMut<NCubeFaceColor>,
+        ResMut<NCubeEdgeThickness>,
+        ResMut<NCubeVertices3D>,
+        ResMut<NCubeUnlit>,
+        ResMut<NCubeIsPaused>,
+    ),
+    (
+        mut contexts,
+        mut q_camera_transform,
+        mut drag_drop_event,
+        mut show_controls,
+        mut is_hovering_file,
+        mut dialog,
+        mut orthographic_camera,
+    ): (
+        EguiContexts,
+        Query<&mut Transform, With<Camera>>,
+        EventReader<FileDragAndDrop>,
+        ResMut<ShowControls>,
+        ResMut<IsHoveringFile>,
+        ResMut<FileDialog>,
+        ResMut<OrthographicCamera>,
+    ),
 ) {
     let context = contexts.ctx_mut();
     egui::Window::new("settings")
@@ -109,6 +133,7 @@ fn info_panel(
                             &mut drag_drop_event,
                             &mut is_hovering_file,
                             &mut dialog,
+                            &mut orthographic_camera,
                         )
                     });
             });
@@ -177,6 +202,7 @@ fn render_ui(
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
     file_dialog: &mut ResMut<FileDialog>,
+    orthographic_camera: &mut ResMut<OrthographicCamera>,
 ) {
     render_controls_and_reset(
         ui,
@@ -226,6 +252,7 @@ fn render_ui(
         ncube.edges.0.len(),
         ncube.faces.0.len() / 2,
     );
+    render_camera_projection(ui, orthographic_camera);
     render_lighting(ui, ncube_unlit);
     render_edge_thickness(ui, ncube_edge_thickness);
     render_edge_color(ui, ncube_edge_color);
@@ -239,6 +266,15 @@ macro_rules! render_row {
         $content
         $ui.end_row()
     }
+}
+
+fn render_camera_projection(ui: &mut Ui, orthographic_camera: &mut ResMut<OrthographicCamera>) {
+    render_row!("camera projection", ui => {
+        ui.scope(|ui| {
+            ui.radio_value(&mut ***orthographic_camera, false, "perspective");
+            ui.radio_value(&mut ***orthographic_camera, true, "orthographic");
+        });
+    });
 }
 
 fn render_dimensions(ui: &mut Ui, ncube_dimension: &mut ResMut<NCubeDimension>) {

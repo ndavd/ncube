@@ -20,7 +20,8 @@ impl Plugin for ResourcesPlugin {
             .init_resource::<IsHoveringFile>()
             .init_resource::<FileDialog>()
             .init_resource::<ShowControls>()
-            .init_resource::<FontHandle>();
+            .init_resource::<FontHandle>()
+            .init_resource::<OrthographicCamera>();
     }
 }
 
@@ -106,3 +107,5 @@ create_resource!(FileDialog(()) => Self(()));
 create_resource!(ShowControls(bool) => Self(false));
 
 create_resource!(FontHandle(Handle<Font>) => Self(Handle::default()));
+
+create_resource!(OrthographicCamera(bool) => Self(false));
