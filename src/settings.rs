@@ -1,4 +1,4 @@
-use crate::camera::get_default_camera_transform;
+use crate::camera::{get_default_camera_projection, get_default_camera_transform};
 use crate::impl_default;
 use crate::ncube::NCube as InnerNCube;
 use crate::resources::{FileDialog, IsHoveringFile, ShowControls, SIZE};
@@ -54,6 +54,8 @@ struct NCubeData {
     #[serde(default)]
     camera_transform: CameraTransform,
     #[serde(default)]
+    orthographic_projection: bool,
+    #[serde(default)]
     edge_thickness: f32,
     #[serde(default)]
     edge_color: Color,
@@ -64,22 +66,44 @@ struct NCubeData {
 }
 
 fn info_panel(
-    mut show_controls: ResMut<ShowControls>,
-    mut ncube_dimension: ResMut<NCubeDimension>,
-    mut ncube: ResMut<NCube>,
-    mut ncube_rotations: ResMut<NCubeRotations>,
-    mut ncube_planes_of_rotation: ResMut<NCubePlanesOfRotation>,
-    mut ncube_edge_color: ResMut<NCubeEdgeColor>,
-    mut ncube_face_color: ResMut<NCubeFaceColor>,
-    mut ncube_edge_thickness: ResMut<NCubeEdgeThickness>,
-    mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
-    mut ncube_unlit: ResMut<NCubeUnlit>,
-    mut ncube_is_paused: ResMut<NCubeIsPaused>,
-    mut contexts: EguiContexts,
-    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
-    mut drag_drop_event: EventReader<FileDragAndDrop>,
-    mut is_hovering_file: ResMut<IsHoveringFile>,
-    mut dialog: ResMut<FileDialog>,
+    (
+        mut ncube_dimension,
+        mut ncube,
+        mut ncube_rotations,
+        mut ncube_planes_of_rotation,
+        mut ncube_edge_color,
+        mut ncube_face_color,
+        mut ncube_edge_thickness,
+        mut ncube_vertices_3d,
+        mut ncube_unlit,
+        mut ncube_is_paused,
+    ): (
+        ResMut<NCubeDimension>,
+        ResMut<NCube>,
+        ResMut<NCubeRotations>,
+        ResMut<NCubePlanesOfRotation>,
+        ResMut<NCubeEdgeColor>,
+        ResMut<NCubeFaceColor>,
+        ResMut<NCubeEdgeThickness>,
+        ResMut<NCubeVertices3D>,
+        ResMut<NCubeUnlit>,
+        ResMut<NCubeIsPaused>,
+    ),
+    (
+        mut contexts,
+        mut q_camera,
+        mut drag_drop_event,
+        mut show_controls,
+        mut is_hovering_file,
+        mut dialog,
+    ): (
+        EguiContexts,
+        Query<(&mut Transform, &mut Projection), With<Camera>>,
+        EventReader<FileDragAndDrop>,
+        ResMut<ShowControls>,
+        ResMut<IsHoveringFile>,
+        ResMut<FileDialog>,
+    ),
 ) {
     let context = contexts.ctx_mut();
     egui::Window::new("settings")
@@ -105,7 +129,7 @@ fn info_panel(
                             &mut ncube_vertices_3d,
                             &mut ncube_unlit,
                             &mut ncube_is_paused,
-                            &mut q_camera_transform,
+                            &mut q_camera,
                             &mut drag_drop_event,
                             &mut is_hovering_file,
                             &mut dialog,
@@ -173,11 +197,12 @@ fn render_ui(
     ncube_vertices_3d: &mut ResMut<NCubeVertices3D>,
     ncube_unlit: &mut ResMut<NCubeUnlit>,
     ncube_is_paused: &mut ResMut<NCubeIsPaused>,
-    q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
+    q_camera: &mut Query<(&mut Transform, &mut Projection), With<Camera>>,
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
     file_dialog: &mut ResMut<FileDialog>,
 ) {
+    let (mut camera_transform, mut camera_projection) = q_camera.get_single_mut().unwrap();
     render_controls_and_reset(
         ui,
         show_controls,
@@ -189,19 +214,20 @@ fn render_ui(
         ncube_face_color,
         ncube_edge_thickness,
         ncube_is_paused,
-        q_camera_transform,
+        &mut camera_transform,
     );
     render_export_data_file(
         ui,
         context,
         file_dialog,
         ncube_dimension,
-        q_camera_transform,
         ncube_rotations,
         ncube_edge_color,
         ncube_face_color,
         ncube_edge_thickness,
         ncube_unlit,
+        &camera_transform,
+        &camera_projection,
     );
     render_drop_data_file(
         ui,
@@ -215,9 +241,10 @@ fn render_ui(
         ncube_vertices_3d,
         ncube_unlit,
         ncube_is_paused,
-        q_camera_transform,
         drag_drop_event,
         is_hovering_file,
+        &mut camera_transform,
+        &mut camera_projection,
     );
     render_dimensions(ui, ncube_dimension);
     render_ncube_info(
@@ -225,6 +252,11 @@ fn render_ui(
         ncube.vertices.0.len(),
         ncube.edges.0.len(),
         ncube.faces.0.len() / 2,
+    );
+    render_camera_projection(
+        ui,
+        &mut camera_projection,
+        camera_transform.translation.length(),
     );
     render_lighting(ui, ncube_unlit);
     render_edge_thickness(ui, ncube_edge_thickness);
@@ -239,6 +271,20 @@ macro_rules! render_row {
         $content
         $ui.end_row()
     }
+}
+
+fn render_camera_projection(ui: &mut Ui, camera_projection: &mut Projection, d: f32) {
+    render_row!("camera projection", ui => {
+        ui.scope(|ui| {
+            let mut is_ortho = matches!(camera_projection, Projection::Orthographic(_));
+            let backup = is_ortho;
+            ui.radio_value(&mut is_ortho, false, "perspective");
+            ui.radio_value(&mut is_ortho, true, "orthographic");
+            if is_ortho != backup {
+                *camera_projection = get_default_camera_projection(is_ortho.then(|| d));
+            }
+        });
+    });
 }
 
 fn render_dimensions(ui: &mut Ui, ncube_dimension: &mut ResMut<NCubeDimension>) {
@@ -324,7 +370,7 @@ fn render_controls_and_reset(
     ncube_face_color: &mut ResMut<NCubeFaceColor>,
     ncube_edge_thickness: &mut ResMut<NCubeEdgeThickness>,
     ncube_is_paused: &mut ResMut<NCubeIsPaused>,
-    q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
+    camera_transform: &mut Transform,
 ) {
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
@@ -336,8 +382,7 @@ fn render_controls_and_reset(
             **ncube = NCube::default();
             **ncube_planes_of_rotation = NCubePlanesOfRotation::default();
             **ncube_rotations = NCubeRotations::default();
-            *q_camera_transform.get_single_mut().unwrap() =
-                crate::camera::get_default_camera_transform();
+            *camera_transform = crate::camera::get_default_camera_transform();
             **ncube_edge_thickness = NCubeEdgeThickness::default();
             **ncube_face_color = NCubeFaceColor::default();
             **ncube_edge_color = NCubeEdgeColor::default();
@@ -355,15 +400,15 @@ fn render_export_data_file(
     ui: &mut Ui,
     _context: &mut egui::Context,
     _file_dialog: &mut ResMut<FileDialog>,
-    ncube_dimension: &mut ResMut<NCubeDimension>,
-    q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
-    ncube_rotations: &mut ResMut<NCubeRotations>,
-    ncube_edge_color: &mut ResMut<NCubeEdgeColor>,
-    ncube_face_color: &mut ResMut<NCubeFaceColor>,
-    ncube_edge_thickness: &mut ResMut<NCubeEdgeThickness>,
-    ncube_unlit: &mut ResMut<NCubeUnlit>,
+    ncube_dimension: &ResMut<NCubeDimension>,
+    ncube_rotations: &ResMut<NCubeRotations>,
+    ncube_edge_color: &ResMut<NCubeEdgeColor>,
+    ncube_face_color: &ResMut<NCubeFaceColor>,
+    ncube_edge_thickness: &ResMut<NCubeEdgeThickness>,
+    ncube_unlit: &ResMut<NCubeUnlit>,
+    camera_transform: &Transform,
+    camera_projection: &Projection,
 ) {
-    let camera_transform = *q_camera_transform.get_single().unwrap();
     let ncube_data = NCubeData {
         dimension: ***ncube_dimension,
         rotations: ncube_rotations
@@ -379,6 +424,7 @@ fn render_export_data_file(
             scale: camera_transform.scale,
         },
         unlit: ***ncube_unlit,
+        orthographic_projection: matches!(camera_projection, Projection::Orthographic(_)),
     };
 
     if ui.button("export to data file").clicked() {
@@ -445,16 +491,21 @@ fn render_drop_data_file(
     ncube_vertices_3d: &mut ResMut<NCubeVertices3D>,
     ncube_unlit: &mut ResMut<NCubeUnlit>,
     ncube_is_paused: &mut ResMut<NCubeIsPaused>,
-    q_camera_transform: &mut Query<&mut Transform, With<Camera>>,
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
+    camera_transform: &mut Transform,
+    camera_projection: &mut Projection,
 ) {
     let mut handle_ncube_data = |data: NCubeData| {
-        *q_camera_transform.get_single_mut().unwrap() = Transform {
+        *camera_transform = Transform {
             translation: data.camera_transform.translation,
             scale: data.camera_transform.scale,
             rotation: data.camera_transform.rotation,
         };
+        *camera_projection = get_default_camera_projection(
+            data.orthographic_projection
+                .then(|| camera_transform.translation.length()),
+        );
         ***ncube_is_paused = true;
         ***ncube_edge_thickness = data.edge_thickness;
         ***ncube_edge_color = data.edge_color;

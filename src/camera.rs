@@ -1,5 +1,6 @@
 use crate::vec::{SphericalCoordinate, SphericalCoordinateSystem};
 use bevy::prelude::*;
+use bevy::render::camera::ScalingMode;
 use bevy::window::PrimaryWindow;
 
 pub struct CameraPlugin;
@@ -27,6 +28,20 @@ pub fn get_default_camera_transform() -> Transform {
     .looking_at(Vec3::ZERO, Vec3::Y)
 }
 
+/// If `ortho_d` is Some(d) then OrthographicProjection is calculated using the provided `d`
+/// else PerspectiveProjection is used
+pub fn get_default_camera_projection(ortho_d: Option<f32>) -> Projection {
+    match ortho_d {
+        Some(d) => Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::WindowSize(
+                1000.0 * 1.0 / d, // Smooth transition in most cases
+            ),
+            ..default()
+        }),
+        None => Projection::Perspective(PerspectiveProjection::default()),
+    }
+}
+
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: get_default_camera_transform(),
@@ -34,6 +49,7 @@ fn spawn_camera(mut commands: Commands) {
             clear_color: bevy::core_pipeline::clear_color::ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
+        projection: get_default_camera_projection(None),
         ..default()
     });
 }
@@ -58,14 +74,14 @@ fn spawn_lighting(mut commands: Commands) {
 }
 
 fn update_camera(
-    mut q_camera_transform: Query<&mut Transform, With<Camera>>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mut q_camera: Query<(&mut Transform, &mut Projection), With<Camera>>,
+    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
+    mouse_button_input: Res<Input<MouseButton>>,
     keys: Res<Input<KeyCode>>,
-    mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    let mut camera_transform = q_camera_transform.get_single_mut().unwrap();
+    let (mut camera_transform, mut camera_projection) = q_camera.get_single_mut().unwrap();
     let mut window = q_primary_window.get_single_mut().unwrap();
 
     let curr_pos_spherical = camera_transform.translation.to_spherical();
@@ -80,6 +96,10 @@ fn update_camera(
                 curr_pos_spherical.theta,
                 curr_pos_spherical.phi,
             ));
+            if let Projection::Orthographic(_) = *camera_projection {
+                *camera_projection =
+                    get_default_camera_projection(Some(camera_transform.translation.length()));
+            }
         });
     }
 

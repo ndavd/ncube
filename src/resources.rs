@@ -19,7 +19,9 @@ impl Plugin for ResourcesPlugin {
             .init_resource::<NCubeUnlit>()
             .init_resource::<IsHoveringFile>()
             .init_resource::<FileDialog>()
-            .init_resource::<ShowControls>();
+            .init_resource::<ShowControls>()
+            .init_resource::<FontHandle>()
+            .init_resource::<OrthographicCamera>();
     }
 }
 
@@ -43,7 +45,7 @@ macro_rules! create_resource {
     ) => {
         $(#[doc = $doc])*
         #[derive(Resource, Deref, DerefMut)]
-        pub struct $s($t);
+        pub struct $s(pub $t);
         impl_default!($s => $i);
     };
 }
@@ -103,3 +105,7 @@ create_resource!(FileDialog(Option<egui_file::FileDialog>) => Self(None));
 create_resource!(FileDialog(()) => Self(()));
 
 create_resource!(ShowControls(bool) => Self(false));
+
+create_resource!(FontHandle(Handle<Font>) => Self(Handle::default()));
+
+create_resource!(OrthographicCamera(bool) => Self(false));
