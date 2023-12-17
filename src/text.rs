@@ -133,7 +133,7 @@ fn update_info_text(
                         "q{}q{}: {:6.1}deg",
                         plane.0 + 1,
                         plane.1 + 1,
-                        value.0.to_degrees() % 360.0
+                        value.0.to_degrees()
                     );
                     info_text.sections[0].style.color = if info_text.sections[0].value == new_value
                     {

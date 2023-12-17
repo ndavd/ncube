@@ -250,7 +250,10 @@ fn rotate_ncube(
         let (angle, vel) = *ncube_rotations.get(&plane).unwrap();
         let da = dt * vel;
         das.push(da);
-        ncube_rotations.insert((plane.0, plane.1), (angle + da, vel));
+        ncube_rotations.insert(
+            (plane.0, plane.1),
+            ((angle + da) % std::f32::consts::TAU, vel),
+        );
     }
     ncube.rotate(&ncube_planes_of_rotation, &das);
     **ncube_vertices_3d = ncube.perspective_project_vertices();

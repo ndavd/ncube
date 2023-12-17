@@ -517,6 +517,7 @@ fn render_drop_data_file(
         ***ncube_planes_of_rotation = Vec::new();
         let mut angles = Vec::new();
         for (d1, d2, angle, vel) in data.rotations {
+            let angle = angle % std::f32::consts::TAU; // To ensure backwards compatibility
             ncube_rotations.insert((d1, d2), (angle, vel));
             ncube_planes_of_rotation.push((d1, d2));
             angles.push(angle);
