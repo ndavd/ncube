@@ -1,4 +1,3 @@
-use crate::resources::OrthographicCamera;
 use crate::vec::{SphericalCoordinate, SphericalCoordinateSystem};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
@@ -29,6 +28,20 @@ pub fn get_default_camera_transform() -> Transform {
     .looking_at(Vec3::ZERO, Vec3::Y)
 }
 
+/// If `ortho_d` is Some(d) then OrthographicProjection is calculated using the provided `d`
+/// else PerspectiveProjection is used
+pub fn get_default_camera_projection(ortho_d: Option<f32>) -> Projection {
+    match ortho_d {
+        Some(d) => Projection::Orthographic(OrthographicProjection {
+            scaling_mode: ScalingMode::WindowSize(
+                1000.0 * 1.0 / d, // Smooth transition in most cases
+            ),
+            ..default()
+        }),
+        None => Projection::Perspective(PerspectiveProjection::default()),
+    }
+}
+
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: get_default_camera_transform(),
@@ -36,6 +49,7 @@ fn spawn_camera(mut commands: Commands) {
             clear_color: bevy::core_pipeline::clear_color::ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
+        projection: get_default_camera_projection(None),
         ..default()
     });
 }
@@ -66,23 +80,11 @@ fn update_camera(
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
     mouse_button_input: Res<Input<MouseButton>>,
     keys: Res<Input<KeyCode>>,
-    orthographic_camera: Res<OrthographicCamera>,
 ) {
     let (mut camera_transform, mut camera_projection) = q_camera.get_single_mut().unwrap();
     let mut window = q_primary_window.get_single_mut().unwrap();
 
     let curr_pos_spherical = camera_transform.translation.to_spherical();
-
-    if orthographic_camera.is_changed() {
-        *camera_projection = if **orthographic_camera {
-            Projection::Orthographic(OrthographicProjection {
-                scaling_mode: ScalingMode::WindowSize(400.0),
-                ..default()
-            })
-        } else {
-            Projection::default()
-        }
-    }
 
     if keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {
         mouse_wheel_events.read().for_each(|event| {
@@ -94,6 +96,10 @@ fn update_camera(
                 curr_pos_spherical.theta,
                 curr_pos_spherical.phi,
             ));
+            if let Projection::Orthographic(_) = *camera_projection {
+                *camera_projection =
+                    get_default_camera_projection(Some(camera_transform.translation.length()));
+            }
         });
     }
 
