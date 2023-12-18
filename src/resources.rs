@@ -54,7 +54,7 @@ create_resource!(NCubeDimension(usize) => Self(5));
 
 create_resource!(NCube(ncube::NCube) => {
     let d = NCubeDimension::default();
-    Self(ncube::NCube::new(*d, SIZE))
+    Self(ncube::NCube::new(*d, SIZE.into()))
 });
 
 create_resource!(NCubeVertices3D(Vec<Vec3>) => {
@@ -74,12 +74,12 @@ create_resource!(
     /// k: Plane
     /// v: Angle, angular velocity
     NCubeRotations(
-        std::collections::HashMap<(usize, usize), (f32, f32)>
+        std::collections::HashMap<(usize, usize), (f64, f64)>
     ) => {
         let planes_of_rotation = NCubePlanesOfRotation::default();
-        let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
+        let mut rotations: HashMap<(usize, usize), (f64, f64)> = HashMap::new();
         for plane in &*planes_of_rotation {
-            rotations.insert(*plane, (0.0_f32, 0.0_f32));
+            rotations.insert(*plane, (0.0, 0.0));
         }
         rotations.insert((1, 2), (0.0, 1.0));
         rotations.insert((0, 3), (0.0, 0.5));

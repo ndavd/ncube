@@ -127,8 +127,8 @@ fn update_camera(
             curr_pos_spherical.r,
             (curr_pos_spherical.theta + event.delta.y.to_radians() * -MOTION_FACTOR)
                 // Prevent flipping effect
-                .min(std::f32::consts::PI * 0.99999)
-                .max(0.00001),
+                .min(std::f32::consts::PI * (1.0 - std::f32::EPSILON))
+                .max(std::f32::EPSILON),
             curr_pos_spherical.phi + event.delta.x.to_radians() * -MOTION_FACTOR,
         ));
         *camera_transform = camera_transform.looking_at(Vec3::ZERO, Vec3::Y);

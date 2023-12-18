@@ -9,12 +9,12 @@ macro_rules! emat {
 pub struct Mat {
     pub rows: usize,
     pub cols: usize,
-    matrix: Vec<f32>,
+    matrix: Vec<f64>,
 }
 
 #[allow(dead_code)]
 impl Mat {
-    pub fn new(mat: &[&[f32]]) -> Self {
+    pub fn new(mat: &[&[f64]]) -> Self {
         let row_len = mat[0].len();
         assert!(mat.iter().all(|r| row_len == r.len()));
         Self {
@@ -40,7 +40,7 @@ impl Mat {
         }
     }
 
-    pub fn fill(n: f32, rows: usize, cols: usize) -> Self {
+    pub fn fill(n: f64, rows: usize, cols: usize) -> Self {
         Self {
             rows,
             cols,
@@ -52,10 +52,10 @@ impl Mat {
         rows: usize,
         cols: usize,
         planes: &Vec<(usize, usize)>,
-        thetas: &Vec<f32>,
+        thetas: &Vec<f64>,
     ) -> Self {
         let mut m = Self::identity(rows, cols);
-        let assign_element = |element: &mut f32, v: f32| {
+        let assign_element = |element: &mut f64, v: f64| {
             *element = if *element == 0.0 { v } else { *element * v };
         };
         for i in 0..planes.len() {
@@ -91,7 +91,7 @@ impl std::ops::Mul for Mat {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self::Output {
         assert_eq!(self.cols, rhs.rows);
-        let mut m: Vec<f32> = Vec::with_capacity(self.rows * rhs.cols);
+        let mut m: Vec<f64> = Vec::with_capacity(self.rows * rhs.cols);
         for i in 0..self.rows {
             for j in 0..rhs.cols {
                 m.push(
@@ -107,9 +107,9 @@ impl std::ops::Mul for Mat {
     }
 }
 
-impl std::ops::Mul<Vec<f32>> for Mat {
-    type Output = Vec<f32>;
-    fn mul(self, mut rhs: Vec<f32>) -> Self::Output {
+impl std::ops::Mul<Vec<f64>> for Mat {
+    type Output = Vec<f64>;
+    fn mul(self, mut rhs: Vec<f64>) -> Self::Output {
         assert_eq!(rhs.len(), self.cols);
         let v = rhs.clone();
         rhs.truncate(self.rows);
@@ -124,9 +124,9 @@ impl std::ops::Mul<Vec<f32>> for Mat {
     }
 }
 
-impl std::ops::Mul<f32> for Mat {
+impl std::ops::Mul<f64> for Mat {
     type Output = Self;
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
@@ -136,9 +136,9 @@ impl std::ops::Mul<f32> for Mat {
         m
     }
 }
-impl std::ops::Add<f32> for Mat {
+impl std::ops::Add<f64> for Mat {
     type Output = Self;
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: f64) -> Self::Output {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
@@ -148,9 +148,9 @@ impl std::ops::Add<f32> for Mat {
         m
     }
 }
-impl std::ops::Sub<f32> for Mat {
+impl std::ops::Sub<f64> for Mat {
     type Output = Self;
-    fn sub(self, rhs: f32) -> Self::Output {
+    fn sub(self, rhs: f64) -> Self::Output {
         let mut m = self.clone();
         for i in 0..self.rows {
             for j in 0..self.cols {
@@ -204,8 +204,8 @@ mod tests {
             &[2.0, 1.0, 2.0, 0.0],
             &[3.0, 0.0, 1.0, 2.0],
         ]);
-        let b: Vec<f32> = Vec::from([1.0, 2.0, 3.0, 4.0]);
-        let c: Vec<f32> = Vec::from([22.0, 10.0, 14.0]);
+        let b: Vec<f64> = Vec::from([1.0, 2.0, 3.0, 4.0]);
+        let c: Vec<f64> = Vec::from([22.0, 10.0, 14.0]);
         assert_eq!(a * b, c);
     }
 }

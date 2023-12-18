@@ -15,7 +15,7 @@ use bevy::window::PrimaryWindow;
 use bevy::{pbr::AlphaMode, window::WindowMode};
 use resources::{
     NCube, NCubeDimension, NCubeEdgeColor, NCubeEdgeThickness, NCubeFaceColor, NCubeIsPaused,
-    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D, SIZE,
+    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D,
 };
 use std::collections::HashMap;
 
@@ -84,12 +84,12 @@ fn spawn_hypercube(
 
         **ncube = ncube::NCube::new(**ncube_dimension, ncube.size);
         let planes_of_rotation = usize::pair_permutations(0, **ncube_dimension - 1);
-        let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
+        let mut rotations: HashMap<(usize, usize), (f64, f64)> = HashMap::new();
         let mut angles = Vec::new();
         for plane in &planes_of_rotation {
             let v = match ncube_rotations.get(plane) {
                 Some(v) => *v,
-                None => (0.0_f32, 0.0_f32),
+                None => (0.0, 0.0),
             };
             rotations.insert(*plane, v);
             angles.push(v.0);
@@ -244,7 +244,7 @@ fn rotate_ncube(
     if **ncube_is_paused {
         return;
     }
-    let dt = time.delta_seconds();
+    let dt: f64 = time.delta_seconds().into();
     let mut das = Vec::new();
     for i in 0..ncube_planes_of_rotation.len() {
         let plane = ncube_planes_of_rotation[i];
@@ -253,7 +253,7 @@ fn rotate_ncube(
         das.push(da);
         ncube_rotations.insert(
             (plane.0, plane.1),
-            ((angle + da) % std::f32::consts::TAU, vel),
+            ((angle + da) % std::f64::consts::TAU, vel),
         );
     }
     ncube.rotate(&ncube_planes_of_rotation, &das);
