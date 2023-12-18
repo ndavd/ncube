@@ -222,7 +222,8 @@ impl NCube {
     pub fn perspective_project_vertices(&self) -> Vec<Vec3> {
         let projection_count = self.dimensions - 3;
         let proj_m = |from_d: usize, to_d: usize, q: f32| {
-            Mat::identity(to_d, from_d) * (1.0 / (self.size * 1.5 - q))
+            let f = self.size / (self.size * 1.5 - q);
+            Mat::identity(to_d, from_d) * f
         };
         let mut v = self.vertices.0.clone();
         for i in 0..projection_count {

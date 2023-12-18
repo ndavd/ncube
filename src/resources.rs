@@ -93,7 +93,7 @@ create_resource!(NCubeEdgeColor(Color) => Self(Color::CYAN));
 
 create_resource!(NCubeFaceColor(Color) => Self(Color::CYAN.with_a(0.1)));
 
-create_resource!(NCubeEdgeThickness(f32) => Self(0.01));
+create_resource!(NCubeEdgeThickness(f32) => Self(0.01 * SIZE));
 
 create_resource!(NCubeUnlit(bool) => Self(false));
 

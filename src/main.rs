@@ -15,7 +15,7 @@ use bevy::window::PrimaryWindow;
 use bevy::{pbr::AlphaMode, window::WindowMode};
 use resources::{
     NCube, NCubeDimension, NCubeEdgeColor, NCubeEdgeThickness, NCubeFaceColor, NCubeIsPaused,
-    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D,
+    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D, SIZE,
 };
 use std::collections::HashMap;
 
@@ -68,6 +68,7 @@ fn spawn_hypercube(
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
     ncube_unlit: Res<NCubeUnlit>,
     ncube_edge_color: Res<NCubeEdgeColor>,
+    ncube_edge_thickness: Res<NCubeEdgeThickness>,
     ncube_face_color: Res<NCubeFaceColor>,
     q_ncube_entities: Query<Entity, With<NCubeMesh>>,
 ) {
@@ -81,7 +82,7 @@ fn spawn_hypercube(
             commands.entity(entity).despawn();
         });
 
-        **ncube = ncube::NCube::new(**ncube_dimension, 1.0);
+        **ncube = ncube::NCube::new(**ncube_dimension, ncube.size);
         let planes_of_rotation = usize::pair_permutations(0, **ncube_dimension - 1);
         let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
         let mut angles = Vec::new();
@@ -113,7 +114,7 @@ fn spawn_hypercube(
                     ..default()
                 }),
                 transform: edge::Edge::transform(
-                    0.01,
+                    **ncube_edge_thickness,
                     ncube_vertices_3d[*i],
                     ncube_vertices_3d[*j],
                 ),
