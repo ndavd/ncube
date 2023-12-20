@@ -55,7 +55,7 @@ where
 #[derive(Debug, Clone)]
 pub struct NCube {
     pub dimensions: usize,
-    pub size: f32,
+    pub size: f64,
     /// Cartesian coordinates of the vertices of the hypercube.
     pub vertices: NVertices,
     /// Vertex indices of the edges of the hypercube.
@@ -65,7 +65,7 @@ pub struct NCube {
 }
 
 #[derive(Debug, Clone)]
-pub struct NVertices(pub Vec<Vec<f32>>);
+pub struct NVertices(pub Vec<Vec<f64>>);
 
 #[derive(Debug, Clone)]
 /// Each edge is composed of 2 vertices (index)
@@ -102,7 +102,7 @@ impl std::fmt::Display for NVertices {
 #[allow(dead_code)]
 impl NCube {
     /// Creates an `n` dimensional hypercube of size `s`.
-    pub fn new(n: usize, s: f32) -> Self {
+    pub fn new(n: usize, s: f64) -> Self {
         let vertices = Self::_vertices(n, s);
         Self {
             dimensions: n,
@@ -118,11 +118,16 @@ impl NCube {
         Self::_face_count(self.dimensions, m)
     }
 
+    /// Computes the diagonal of the hypercube
+    pub fn diagonal_length(&self) -> f64 {
+        self.size * (self.dimensions as f64).sqrt()
+    }
+
     fn _face_count(n: usize, m: usize) -> usize {
         2_usize.pow((n - m).try_into().unwrap()) * n.permute(m)
     }
 
-    fn _vertices(n: usize, s: f32) -> NVertices {
+    fn _vertices(n: usize, s: f64) -> NVertices {
         let s = s / 2.0;
         let v_count = Self::_face_count(n, 0);
         let vertices = (0..v_count)
@@ -131,7 +136,7 @@ impl NCube {
                     .map(|j| {
                         let direction =
                             -1 + 2 * ((i / 2_usize.pow(j.try_into().unwrap())) % 2 == 0) as i8;
-                        s * direction as f32
+                        s * direction as f64
                     })
                     .collect::<Vec<_>>()
             })
@@ -163,7 +168,7 @@ impl NCube {
 
     // NOTE: This was not trivial
     fn _faces(vertices: &NVertices, n: usize) -> NFaces {
-        let extract_faces = |vertices: Vec<(usize, &Vec<f32>)>| {
+        let extract_faces = |vertices: Vec<(usize, &Vec<f64>)>| {
             vertices
                 .permute_four()
                 .iter()
@@ -211,9 +216,9 @@ impl NCube {
         NFaces(faces)
     }
 
-    pub fn rotate(&mut self, planes: &Vec<(usize, usize)>, theta_rads: &Vec<f32>) -> &mut Self {
+    pub fn rotate(&mut self, planes: &Vec<(usize, usize)>, theta_rads: &Vec<f64>) -> &mut Self {
         for vertex in &mut self.vertices.0 {
-            *vertex = Mat::rotation(self.dimensions, self.dimensions, planes, theta_rads)
+            *vertex = Mat::from_rotations(self.dimensions, self.dimensions, planes, theta_rads)
                 * vertex.clone();
         }
         self
@@ -221,8 +226,9 @@ impl NCube {
 
     pub fn perspective_project_vertices(&self) -> Vec<Vec3> {
         let projection_count = self.dimensions - 3;
-        let proj_m = |from_d: usize, to_d: usize, q: f32| {
-            Mat::identity(to_d, from_d) * (1.0 / (self.size * 1.5 - q))
+        let proj_m = |from_d: usize, to_d: usize, q: f64| {
+            let f = self.size / (self.size * 1.5 - q);
+            Mat::identity(to_d, from_d) * f
         };
         let mut v = self.vertices.0.clone();
         for i in 0..projection_count {
@@ -233,7 +239,9 @@ impl NCube {
                 v[v_index] = m * v[v_index].clone();
             }
         }
-        v.iter().map(|x| Vec3::new(x[0], x[1], x[2])).collect()
+        v.iter()
+            .map(|x| Vec3::new(x[0] as f32, x[1] as f32, x[2] as f32))
+            .collect()
     }
 }
 

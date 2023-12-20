@@ -1,3 +1,4 @@
+use crate::resources::SIZE;
 use crate::vec::{SphericalCoordinate, SphericalCoordinateSystem};
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
@@ -16,12 +17,12 @@ const WHEEL_FACTOR: f32 = if cfg!(target_family = "wasm") {
     0.001
 } else {
     0.3
-};
+} * SIZE;
 const MOTION_FACTOR: f32 = 0.3;
 
 pub fn get_default_camera_transform() -> Transform {
     Transform::from_translation(Vec3::from_spherical(SphericalCoordinate::new(
-        4.0,
+        4.0 * SIZE,
         std::f32::consts::PI / 2.0,
         0.0,
     )))
@@ -55,20 +56,24 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn spawn_lighting(mut commands: Commands) {
+    let intensity = 1500.0 * SIZE.powi(2);
+    let range = 20.0 * SIZE;
     commands.spawn(PointLightBundle {
         point_light: PointLight {
-            intensity: 1500.0,
+            intensity,
+            range,
             ..default()
         },
-        transform: Transform::from_xyz(3.0, 8.0, 4.0),
+        transform: Transform::from_translation(Vec3::new(3.0, 8.0, 4.0) * SIZE),
         ..default()
     });
     commands.spawn(PointLightBundle {
         point_light: PointLight {
-            intensity: 1500.0,
+            intensity,
+            range,
             ..default()
         },
-        transform: Transform::from_xyz(-4.0, 8.0, -4.0),
+        transform: Transform::from_translation(Vec3::new(-4.0, 8.0, -4.0) * SIZE),
         ..default()
     });
 }
@@ -122,8 +127,8 @@ fn update_camera(
             curr_pos_spherical.r,
             (curr_pos_spherical.theta + event.delta.y.to_radians() * -MOTION_FACTOR)
                 // Prevent flipping effect
-                .min(std::f32::consts::PI * 0.99999)
-                .max(0.00001),
+                .min(std::f32::consts::PI * (1.0 - std::f32::EPSILON))
+                .max(std::f32::EPSILON),
             curr_pos_spherical.phi + event.delta.x.to_radians() * -MOTION_FACTOR,
         ));
         *camera_transform = camera_transform.looking_at(Vec3::ZERO, Vec3::Y);

@@ -50,7 +50,7 @@ impl_default!(CameraTransform => {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct NCubeData {
     dimension: usize,
-    rotations: Vec<(usize, usize, f32, f32)>,
+    rotations: Vec<(usize, usize, f64, f64)>,
     #[serde(default)]
     camera_transform: CameraTransform,
     #[serde(default)]
@@ -355,7 +355,9 @@ fn render_planes_of_rotation(
         render_row!(format!("q{}q{} w", plane.0 + 1, plane.1 + 1), ui => {
             ui.add(egui::Slider::new(&mut tmp, -3.0..=3.0));
         });
-        ncube_rotations.insert(plane, (angle, tmp));
+        if tmp != vel {
+            ncube_rotations.insert(plane, (angle, tmp));
+        }
     }
 }
 
@@ -512,11 +514,12 @@ fn render_drop_data_file(
         ***ncube_face_color = data.face_color;
         ***ncube_unlit = data.unlit;
         ***ncube_dimension = data.dimension;
-        ***ncube = InnerNCube::new(***ncube_dimension, SIZE);
+        ***ncube = InnerNCube::new(***ncube_dimension, SIZE.into());
         ***ncube_rotations = std::collections::HashMap::new();
         ***ncube_planes_of_rotation = Vec::new();
         let mut angles = Vec::new();
         for (d1, d2, angle, vel) in data.rotations {
+            let angle = angle % std::f64::consts::TAU; // To ensure backwards compatibility
             ncube_rotations.insert((d1, d2), (angle, vel));
             ncube_planes_of_rotation.push((d1, d2));
             angles.push(angle);

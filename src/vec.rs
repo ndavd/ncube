@@ -51,23 +51,26 @@ impl TriangleNormal for Vec3 {
     }
 }
 
-pub trait MathOps
-where
-    Self: Sized,
-{
+pub trait MathOps {
     // Computes the dot product between 2 vectors
-    fn dot(&self, b: &Self) -> f32;
+    fn dot(&self, b: &Self) -> f64;
     // Computes the hadamard product between 2 vectors
     fn hadamard(&self, b: &Self) -> Self;
     /// Checks how many dimensions are shared across a group of `points` (equal in value)
     /// Useful for checking whether the points lie within an n dimensional slice.
     fn shared_dimensions(points: &[&Self]) -> Vec<usize>;
     /// Computes the distance between 2 vectors
-    fn distance(&self, b: &Self) -> f32;
+    fn distance(&self, b: &Self) -> f64;
+    /// Computes the magnitude of a vector
+    fn magnitude(&self) -> f64;
+    /// Normalizes vector
+    fn normalize(&self) -> Self;
+    /// Scales vector
+    fn scale(&self, a: f64) -> Self;
 }
 
-impl MathOps for Vec<f32> {
-    fn dot(&self, b: &Self) -> f32 {
+impl MathOps for Vec<f64> {
+    fn dot(&self, b: &Self) -> f64 {
         let len = self.len();
         assert_eq!(len, b.len());
         (0..len).map(|d| self[d] * b[d]).sum()
@@ -89,14 +92,27 @@ impl MathOps for Vec<f32> {
         common_d
     }
 
-    fn distance(&self, b: &Self) -> f32 {
+    fn distance(&self, b: &Self) -> f64 {
         let d = self.len();
         assert_eq!(d, b.len());
         self.iter()
             .enumerate()
             .map(|(i, x)| (b[i] - x).powi(2))
-            .sum::<f32>()
+            .sum::<f64>()
             .sqrt()
+    }
+
+    fn magnitude(&self) -> f64 {
+        self.iter().map(|x| x.powi(2)).sum::<f64>().sqrt()
+    }
+
+    fn normalize(&self) -> Self {
+        let l = self.magnitude();
+        self.iter().map(|x| x / l).collect()
+    }
+
+    fn scale(&self, a: f64) -> Self {
+        self.iter().map(|x| a * x).collect()
     }
 }
 

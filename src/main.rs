@@ -68,6 +68,7 @@ fn spawn_hypercube(
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
     ncube_unlit: Res<NCubeUnlit>,
     ncube_edge_color: Res<NCubeEdgeColor>,
+    ncube_edge_thickness: Res<NCubeEdgeThickness>,
     ncube_face_color: Res<NCubeFaceColor>,
     q_ncube_entities: Query<Entity, With<NCubeMesh>>,
 ) {
@@ -81,14 +82,14 @@ fn spawn_hypercube(
             commands.entity(entity).despawn();
         });
 
-        **ncube = ncube::NCube::new(**ncube_dimension, 1.0);
+        **ncube = ncube::NCube::new(**ncube_dimension, ncube.size);
         let planes_of_rotation = usize::pair_permutations(0, **ncube_dimension - 1);
-        let mut rotations: HashMap<(usize, usize), (f32, f32)> = HashMap::new();
+        let mut rotations: HashMap<(usize, usize), (f64, f64)> = HashMap::new();
         let mut angles = Vec::new();
         for plane in &planes_of_rotation {
             let v = match ncube_rotations.get(plane) {
                 Some(v) => *v,
-                None => (0.0_f32, 0.0_f32),
+                None => (0.0, 0.0),
             };
             rotations.insert(*plane, v);
             angles.push(v.0);
@@ -113,7 +114,7 @@ fn spawn_hypercube(
                     ..default()
                 }),
                 transform: edge::Edge::transform(
-                    0.01,
+                    **ncube_edge_thickness,
                     ncube_vertices_3d[*i],
                     ncube_vertices_3d[*j],
                 ),
@@ -234,23 +235,26 @@ fn update_ncube_meshes(
 
 fn rotate_ncube(
     time: Res<Time>,
+    ncube_planes_of_rotation: Res<NCubePlanesOfRotation>,
+    ncube_is_paused: Res<NCubeIsPaused>,
     mut ncube: ResMut<NCube>,
     mut ncube_rotations: ResMut<NCubeRotations>,
-    ncube_planes_of_rotation: Res<NCubePlanesOfRotation>,
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
-    ncube_is_paused: Res<NCubeIsPaused>,
 ) {
     if **ncube_is_paused {
         return;
     }
-    let dt = time.delta_seconds();
+    let dt: f64 = time.delta_seconds().into();
     let mut das = Vec::new();
     for i in 0..ncube_planes_of_rotation.len() {
         let plane = ncube_planes_of_rotation[i];
         let (angle, vel) = *ncube_rotations.get(&plane).unwrap();
         let da = dt * vel;
         das.push(da);
-        ncube_rotations.insert((plane.0, plane.1), (angle + da, vel));
+        ncube_rotations.insert(
+            (plane.0, plane.1),
+            ((angle + da) % std::f64::consts::TAU, vel),
+        );
     }
     ncube.rotate(&ncube_planes_of_rotation, &das);
     **ncube_vertices_3d = ncube.perspective_project_vertices();
