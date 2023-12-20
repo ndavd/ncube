@@ -1,7 +1,7 @@
 use crate::camera::{get_default_camera_projection, get_default_camera_transform};
 use crate::impl_default;
-use crate::ncube::{NCube as InnerNCube, NVertices};
-use crate::resources::{FileDialog, IsHoveringFile, NCubeCorrection, ShowControls, SIZE};
+use crate::ncube::NCube as InnerNCube;
+use crate::resources::{FileDialog, IsHoveringFile, ShowControls, SIZE};
 use crate::NCube;
 use crate::NCubeDimension;
 use crate::NCubeEdgeColor;
@@ -77,7 +77,6 @@ fn info_panel(
         mut ncube_vertices_3d,
         mut ncube_unlit,
         mut ncube_is_paused,
-        mut ncube_correction,
     ): (
         ResMut<NCubeDimension>,
         ResMut<NCube>,
@@ -89,7 +88,6 @@ fn info_panel(
         ResMut<NCubeVertices3D>,
         ResMut<NCubeUnlit>,
         ResMut<NCubeIsPaused>,
-        ResMut<NCubeCorrection>,
     ),
     (
         mut contexts,
@@ -131,7 +129,6 @@ fn info_panel(
                             &mut ncube_vertices_3d,
                             &mut ncube_unlit,
                             &mut ncube_is_paused,
-                            &mut ncube_correction,
                             &mut q_camera,
                             &mut drag_drop_event,
                             &mut is_hovering_file,
@@ -200,7 +197,6 @@ fn render_ui(
     ncube_vertices_3d: &mut ResMut<NCubeVertices3D>,
     ncube_unlit: &mut ResMut<NCubeUnlit>,
     ncube_is_paused: &mut ResMut<NCubeIsPaused>,
-    ncube_correction: &mut ResMut<NCubeCorrection>,
     q_camera: &mut Query<(&mut Transform, &mut Projection), With<Camera>>,
     drag_drop_event: &mut EventReader<FileDragAndDrop>,
     is_hovering_file: &mut ResMut<IsHoveringFile>,
@@ -266,14 +262,7 @@ fn render_ui(
     render_edge_thickness(ui, ncube_edge_thickness);
     render_edge_color(ui, ncube_edge_color);
     render_face_color(ui, ncube_face_color);
-    render_planes_of_rotation(
-        ui,
-        ncube_correction,
-        ncube_rotations,
-        ncube_planes_of_rotation,
-        ncube_vertices_3d,
-        ncube.vertices.clone(),
-    );
+    render_planes_of_rotation(ui, ncube_rotations, ncube_planes_of_rotation);
 }
 
 macro_rules! render_row {
@@ -356,11 +345,8 @@ fn render_face_color(ui: &mut Ui, ncube_face_color: &mut ResMut<NCubeFaceColor>)
 
 fn render_planes_of_rotation(
     ui: &mut Ui,
-    ncube_correction: &mut ResMut<NCubeCorrection>,
     ncube_rotations: &mut ResMut<NCubeRotations>,
     ncube_planes_of_rotation: &mut ResMut<NCubePlanesOfRotation>,
-    ncube_vertices_3d: &mut ResMut<NCubeVertices3D>,
-    ncube_vertices: NVertices,
 ) {
     for i in 0..ncube_planes_of_rotation.len() {
         let plane = ncube_planes_of_rotation[i];
@@ -371,11 +357,6 @@ fn render_planes_of_rotation(
         });
         if tmp != vel {
             ncube_rotations.insert(plane, (angle, tmp));
-            **ncube_correction = NCubeCorrection::new(
-                ncube_rotations.clone(),
-                ncube_vertices_3d.clone(),
-                ncube_vertices.clone(),
-            );
         }
     }
 }

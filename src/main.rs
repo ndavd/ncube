@@ -14,8 +14,8 @@ use bevy::render::mesh::PrimitiveTopology;
 use bevy::window::PrimaryWindow;
 use bevy::{pbr::AlphaMode, window::WindowMode};
 use resources::{
-    NCube, NCubeCorrection, NCubeDimension, NCubeEdgeColor, NCubeEdgeThickness, NCubeFaceColor,
-    NCubeIsPaused, NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D,
+    NCube, NCubeDimension, NCubeEdgeColor, NCubeEdgeThickness, NCubeFaceColor, NCubeIsPaused,
+    NCubePlanesOfRotation, NCubeRotations, NCubeUnlit, NCubeVertices3D,
 };
 use std::collections::HashMap;
 
@@ -66,7 +66,6 @@ fn spawn_hypercube(
     mut ncube_rotations: ResMut<NCubeRotations>,
     mut ncube_planes_of_rotation: ResMut<NCubePlanesOfRotation>,
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
-    mut ncube_correction: ResMut<NCubeCorrection>,
     ncube_unlit: Res<NCubeUnlit>,
     ncube_edge_color: Res<NCubeEdgeColor>,
     ncube_edge_thickness: Res<NCubeEdgeThickness>,
@@ -100,11 +99,6 @@ fn spawn_hypercube(
             .rotate(&planes_of_rotation, &angles)
             .perspective_project_vertices();
         **ncube_planes_of_rotation = planes_of_rotation;
-        *ncube_correction = NCubeCorrection::new(
-            ncube_rotations.clone(),
-            ncube_vertices_3d.clone(),
-            ncube.vertices.clone(),
-        );
     }
 
     let mesh = shape::Cube::default();
@@ -246,17 +240,8 @@ fn rotate_ncube(
     mut ncube: ResMut<NCube>,
     mut ncube_rotations: ResMut<NCubeRotations>,
     mut ncube_vertices_3d: ResMut<NCubeVertices3D>,
-    mut ncube_correction: ResMut<NCubeCorrection>,
 ) {
     if **ncube_is_paused {
-        return;
-    }
-    if ncube_correction.current_angle > std::f64::consts::TAU {
-        println!("APPLIED CORRECTION");
-        **ncube_rotations = ncube_correction.rotations.clone();
-        **ncube_vertices_3d = ncube_correction.vertices_3d.clone();
-        ncube.vertices = ncube_correction.vertices.clone();
-        ncube_correction.reset_angle();
         return;
     }
     let dt: f64 = time.delta_seconds().into();
@@ -273,7 +258,6 @@ fn rotate_ncube(
     }
     ncube.rotate(&ncube_planes_of_rotation, &das);
     **ncube_vertices_3d = ncube.perspective_project_vertices();
-    ncube_correction.increment_angle(dt);
 }
 
 fn update_pause(

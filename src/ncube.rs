@@ -75,16 +75,6 @@ pub struct NEdges(pub Vec<(usize, usize)>);
 /// Each face is composed of 3 vertices (index)
 pub struct NFaces(pub Vec<(usize, usize, usize)>);
 
-#[derive(Debug, Clone)]
-pub struct NCorrection {
-    /// plane.0, plane.1, angle, angular velocity
-    pub slowest_rotation: (usize, usize, f64, f64),
-    pub rotations: std::collections::HashMap<(usize, usize), (f64, f64)>,
-    pub vertices_3d: Vec<Vec3>,
-    pub vertices: NVertices,
-    pub current_angle: f64,
-}
-
 impl std::fmt::Display for NVertices {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "[")?;
@@ -126,6 +116,11 @@ impl NCube {
     /// Computes how many m dimensional faces the hypercube has
     pub fn face_count(&self, m: usize) -> usize {
         Self::_face_count(self.dimensions, m)
+    }
+
+    /// Computes the diagonal of the hypercube
+    pub fn diagonal_length(&self) -> f64 {
+        self.size * (self.dimensions as f64).sqrt()
     }
 
     fn _face_count(n: usize, m: usize) -> usize {
@@ -223,7 +218,7 @@ impl NCube {
 
     pub fn rotate(&mut self, planes: &Vec<(usize, usize)>, theta_rads: &Vec<f64>) -> &mut Self {
         for vertex in &mut self.vertices.0 {
-            *vertex = Mat::rotation(self.dimensions, self.dimensions, planes, theta_rads)
+            *vertex = Mat::from_rotations(self.dimensions, self.dimensions, planes, theta_rads)
                 * vertex.clone();
         }
         self
@@ -247,15 +242,6 @@ impl NCube {
         v.iter()
             .map(|x| Vec3::new(x[0] as f32, x[1] as f32, x[2] as f32))
             .collect()
-    }
-}
-
-impl NCorrection {
-    pub fn increment_angle(&mut self, dt: f64) {
-        self.current_angle += self.slowest_rotation.3 * dt;
-    }
-    pub fn reset_angle(&mut self) {
-        self.current_angle = 0.0;
     }
 }
 

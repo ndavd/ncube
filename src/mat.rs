@@ -48,21 +48,30 @@ impl Mat {
         }
     }
 
-    pub fn rotation(
+    pub fn rotation(rows: usize, cols: usize, plane: (usize, usize), theta: f64) -> Self {
+        let mut m = Self::identity(rows, cols);
+        let assign_element = |element: &mut f64, v: f64| {
+            *element = if *element == 0.0 { v } else { *element * v };
+        };
+        assign_element(&mut emat!(m[plane.0][plane.0]), theta.cos());
+        assign_element(&mut emat!(m[plane.0][plane.1]), -theta.sin());
+        assign_element(&mut emat!(m[plane.1][plane.0]), theta.sin());
+        assign_element(&mut emat!(m[plane.1][plane.1]), theta.cos());
+        m
+    }
+
+    pub fn from_rotations(
         rows: usize,
         cols: usize,
         planes: &Vec<(usize, usize)>,
         thetas: &Vec<f64>,
     ) -> Self {
         let mut m = Self::identity(rows, cols);
-        let assign_element = |element: &mut f64, v: f64| {
-            *element = if *element == 0.0 { v } else { *element * v };
-        };
         for i in 0..planes.len() {
-            assign_element(&mut emat!(m[planes[i].0][planes[i].0]), thetas[i].cos());
-            assign_element(&mut emat!(m[planes[i].0][planes[i].1]), -thetas[i].sin());
-            assign_element(&mut emat!(m[planes[i].1][planes[i].0]), thetas[i].sin());
-            assign_element(&mut emat!(m[planes[i].1][planes[i].1]), thetas[i].cos());
+            if thetas[i] == 0.0 {
+                continue;
+            }
+            m = m * Self::rotation(rows, cols, planes[i], thetas[i])
         }
         m
     }

@@ -61,6 +61,12 @@ pub trait MathOps {
     fn shared_dimensions(points: &[&Self]) -> Vec<usize>;
     /// Computes the distance between 2 vectors
     fn distance(&self, b: &Self) -> f64;
+    /// Computes the magnitude of a vector
+    fn magnitude(&self) -> f64;
+    /// Normalizes vector
+    fn normalize(&self) -> Self;
+    /// Scales vector
+    fn scale(&self, a: f64) -> Self;
 }
 
 impl MathOps for Vec<f64> {
@@ -94,6 +100,19 @@ impl MathOps for Vec<f64> {
             .map(|(i, x)| (b[i] - x).powi(2))
             .sum::<f64>()
             .sqrt()
+    }
+
+    fn magnitude(&self) -> f64 {
+        self.iter().map(|x| x.powi(2)).sum::<f64>().sqrt()
+    }
+
+    fn normalize(&self) -> Self {
+        let l = self.magnitude();
+        self.iter().map(|x| x / l).collect()
+    }
+
+    fn scale(&self, a: f64) -> Self {
+        self.iter().map(|x| a * x).collect()
     }
 }
 
