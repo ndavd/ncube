@@ -1,5 +1,5 @@
-use crate::ncube;
 use crate::ncube::ExtendedMathOps;
+use crate::ncube::{self, NCorrection};
 use bevy::prelude::*;
 use std::collections::HashMap;
 
@@ -12,6 +12,7 @@ impl Plugin for ResourcesPlugin {
             .init_resource::<NCubeVertices3D>()
             .init_resource::<NCubePlanesOfRotation>()
             .init_resource::<NCubeRotations>()
+            .init_resource::<NCubeCorrection>()
             .init_resource::<NCubeIsPaused>()
             .init_resource::<NCubeEdgeColor>()
             .init_resource::<NCubeFaceColor>()
@@ -86,6 +87,50 @@ create_resource!(
         Self(rotations)
     }
 );
+
+pub fn get_slowest_rotation(
+    rotations: &std::collections::HashMap<(usize, usize), (f64, f64)>,
+) -> (usize, usize, f64, f64) {
+    let values = rotations
+        .iter()
+        .filter(|(_, x)| x.1 != 0.0)
+        .min_by(|(_, a), (_, b)| a.1.partial_cmp(&b.1).unwrap())
+        .unwrap();
+    (values.0 .0, values.0 .1, values.1 .0, values.1 .1)
+}
+
+create_resource!(
+    /// Used for correcting floating point errors every full rotation
+    NCubeCorrection(NCorrection) => {
+        let rotations = NCubeRotations::default();
+        let vertices_3d = NCubeVertices3D::default();
+        Self (
+            NCorrection {
+                slowest_rotation: get_slowest_rotation(&rotations),
+                rotations: rotations.0,
+                vertices_3d: vertices_3d.0,
+                vertices: ncube::NVertices(Vec::new()),
+                current_angle: 0.0,
+            }
+        )
+    }
+);
+impl NCubeCorrection {
+    pub fn new(
+        rotations: std::collections::HashMap<(usize, usize), (f64, f64)>,
+        vertices_3d: Vec<Vec3>,
+        vertices: ncube::NVertices,
+    ) -> Self {
+        println!("NEW CORRECTION SAVED");
+        Self(NCorrection {
+            slowest_rotation: get_slowest_rotation(&rotations),
+            rotations,
+            vertices_3d,
+            vertices,
+            current_angle: 0.0,
+        })
+    }
+}
 
 create_resource!(NCubeIsPaused(bool) => Self(false));
 

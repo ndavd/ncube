@@ -75,6 +75,16 @@ pub struct NEdges(pub Vec<(usize, usize)>);
 /// Each face is composed of 3 vertices (index)
 pub struct NFaces(pub Vec<(usize, usize, usize)>);
 
+#[derive(Debug, Clone)]
+pub struct NCorrection {
+    /// plane.0, plane.1, angle, angular velocity
+    pub slowest_rotation: (usize, usize, f64, f64),
+    pub rotations: std::collections::HashMap<(usize, usize), (f64, f64)>,
+    pub vertices_3d: Vec<Vec3>,
+    pub vertices: NVertices,
+    pub current_angle: f64,
+}
+
 impl std::fmt::Display for NVertices {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "[")?;
@@ -237,6 +247,15 @@ impl NCube {
         v.iter()
             .map(|x| Vec3::new(x[0] as f32, x[1] as f32, x[2] as f32))
             .collect()
+    }
+}
+
+impl NCorrection {
+    pub fn increment_angle(&mut self, dt: f64) {
+        self.current_angle += self.slowest_rotation.3 * dt;
+    }
+    pub fn reset_angle(&mut self) {
+        self.current_angle = 0.0;
     }
 }
 
