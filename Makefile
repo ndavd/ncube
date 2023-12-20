@@ -22,6 +22,6 @@ web: FORCE
 
 clean: FORCE
 	-rm -r target
-	-rm web/public/ncube.zip
+	-rm -r web/wasm
 
 FORCE:
