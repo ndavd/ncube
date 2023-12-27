@@ -19,7 +19,18 @@ use resources::{
 };
 use std::collections::HashMap;
 
+fn version_info() -> String {
+    format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+}
+
 fn main() {
+    if let Some(arg) = std::env::args().nth(1) {
+        if arg.as_str() == "--version" {
+            println!("{}", version_info());
+            return;
+        }
+    }
+
     App::new()
         .add_plugins(DefaultPlugins.build().set(WindowPlugin {
             primary_window: Some(Window {

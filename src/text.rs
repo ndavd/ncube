@@ -1,4 +1,5 @@
 use crate::resources::FontHandle;
+use crate::version_info;
 use crate::NCubeDimension;
 use crate::NCubePlanesOfRotation;
 use crate::NCubeRotations;
@@ -52,9 +53,8 @@ fn spawn_title_text(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
     commands.spawn(TextBundle {
         text: Text::from_section(
             format!(
-                "{} v{} - {}\n{}",
-                env!("CARGO_PKG_NAME"),
-                env!("CARGO_PKG_VERSION"),
+                "{} - {}\n{}",
+                version_info(),
                 env!("CARGO_PKG_DESCRIPTION"),
                 env!("CARGO_PKG_AUTHORS"),
             ),
