@@ -1,5 +1,11 @@
 # ncube - A Generalized Hypercube Visualizer
 
+<div>
+  <img alt="Crates.io Version" src="https://img.shields.io/crates/v/ncube?style=flat-square">
+  <img alt="Website" src="https://img.shields.io/website?url=https%3A%2F%2Fncube.ndavd.com&style=flat-square&label=ncube.ndavd.com">
+</div>
+<br/>
+
 `ncube` allows you to visualize rotating hypercubes of arbitrary dimensions. It
 works by rotating the hyperdimensional vertices and applying a chain of
 perspective projections to them until the 3rd dimension is reached. **Everything
