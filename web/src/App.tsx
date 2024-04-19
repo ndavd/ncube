@@ -98,7 +98,7 @@ const App = () => {
   const renderNcube = () => (
     <canvas
       id="bevy"
-      style={{ display: hasLoaded ? 'inline' : 'none' }}
+      style={{ display: hasLoaded ? 'inline' : 'none', width: '100%', height: '100%' }}
       onContextMenu={(e) => e.preventDefault()}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
