@@ -326,7 +326,7 @@ fn render_edge_color(ui: &mut Ui, ncube_edge_color: &mut ResMut<NCubeEdgeColor>)
             ncube_edge_color.a(),
         ];
         ui.color_edit_button_rgba_unmultiplied(&mut color);
-        ***ncube_edge_color = Color::from(color);
+        ***ncube_edge_color = Color::rgba_from_array(color);
     });
 }
 
@@ -339,7 +339,7 @@ fn render_face_color(ui: &mut Ui, ncube_face_color: &mut ResMut<NCubeFaceColor>)
             ncube_face_color.a(),
         ];
         ui.color_edit_button_rgba_unmultiplied(&mut color);
-        ***ncube_face_color = Color::from(color);
+        ***ncube_face_color = Color::rgba_from_array(color);
     });
 }
 

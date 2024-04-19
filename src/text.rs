@@ -34,7 +34,7 @@ fn spawn_title_text(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
     };
     commands.spawn((
         TextBundle {
-            text: Text::from_section("n-cube", text_style).with_alignment(TextAlignment::Right),
+            text: Text::from_section("n-cube", text_style).with_justify(JustifyText::Right),
             style: Style {
                 position_type: PositionType::Absolute,
                 top: Val::Px(10.0),
@@ -104,7 +104,7 @@ fn spawn_info_text(
         commands.spawn((
             TextBundle {
                 text: Text::from_section(plane_info, text_style.clone())
-                    .with_alignment(TextAlignment::Right),
+                    .with_justify(JustifyText::Right),
                 style: Style {
                     position_type: PositionType::Absolute,
                     top: Val::Px(20.0 + 20.0 * (i as f32 + 1.0)),

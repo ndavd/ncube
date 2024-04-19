@@ -46,17 +46,18 @@ pub fn get_default_camera_projection(ortho_d: Option<f32>) -> Projection {
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: get_default_camera_transform(),
-        camera_3d: Camera3d {
-            clear_color: bevy::core_pipeline::clear_color::ClearColorConfig::Custom(Color::BLACK),
+        camera: Camera {
+            clear_color: bevy::render::camera::ClearColorConfig::Custom(Color::BLACK),
             ..default()
         },
+        camera_3d: Camera3d { ..default() },
         projection: get_default_camera_projection(None),
         ..default()
     });
 }
 
 fn spawn_lighting(mut commands: Commands) {
-    let intensity = 1500.0 * SIZE.powi(2);
+    let intensity = 1500000.0 * SIZE.powi(2);
     let range = 20.0 * SIZE;
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -83,8 +84,8 @@ fn update_camera(
     mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
     mut mouse_wheel_events: EventReader<bevy::input::mouse::MouseWheel>,
     mut mouse_motion_events: EventReader<bevy::input::mouse::MouseMotion>,
-    mouse_button_input: Res<Input<MouseButton>>,
-    keys: Res<Input<KeyCode>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
+    keys: Res<ButtonInput<KeyCode>>,
 ) {
     let (mut camera_transform, mut camera_projection) = q_camera.get_single_mut().unwrap();
     let mut window = q_primary_window.get_single_mut().unwrap();

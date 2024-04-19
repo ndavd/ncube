@@ -11,6 +11,7 @@ use crate::ncube::ExtendedMathOps;
 use crate::vec::TriangleNormal;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
+use bevy::render::render_asset::RenderAssetUsages;
 use bevy::window::PrimaryWindow;
 use bevy::{pbr::AlphaMode, window::WindowMode};
 use resources::{
@@ -37,7 +38,6 @@ fn main() {
                 title: env!("CARGO_PKG_NAME").to_string(),
                 #[cfg(target_family = "wasm")]
                 canvas: Some(String::from("#bevy")),
-                fit_canvas_to_parent: true,
                 ..default()
             }),
             ..default()
@@ -112,11 +112,11 @@ fn spawn_hypercube(
         **ncube_planes_of_rotation = planes_of_rotation;
     }
 
-    let mesh = shape::Cube::default();
+    let mesh = Cuboid::default();
     for (i, j) in &ncube.edges.0 {
         commands.spawn((
             MaterialMeshBundle {
-                mesh: meshes.add(mesh.into()).into(),
+                mesh: meshes.add(mesh).into(),
                 material: materials.add(StandardMaterial {
                     base_color: **ncube_edge_color,
                     double_sided: true,
@@ -136,7 +136,10 @@ fn spawn_hypercube(
         ));
     }
     for (i, j, k) in &ncube.faces.0 {
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
         mesh.insert_attribute(
             Mesh::ATTRIBUTE_POSITION,
             vec![
@@ -152,7 +155,7 @@ fn spawn_hypercube(
         }
         commands.spawn((
             MaterialMeshBundle {
-                mesh: meshes.add(mesh.into()).into(),
+                mesh: meshes.add(mesh).into(),
                 material: materials.add(StandardMaterial {
                     base_color: **ncube_face_color,
                     alpha_mode: AlphaMode::Add,
@@ -272,7 +275,7 @@ fn rotate_ncube(
 }
 
 fn update_pause(
-    keyboard_input: Res<Input<bevy::input::keyboard::KeyCode>>,
+    keyboard_input: Res<ButtonInput<bevy::input::keyboard::KeyCode>>,
     mut ncube_is_paused: ResMut<NCubeIsPaused>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
@@ -281,10 +284,10 @@ fn update_pause(
 }
 
 fn update_fullscreen(
-    keyboard_input: Res<Input<bevy::input::keyboard::KeyCode>>,
+    keyboard_input: Res<ButtonInput<bevy::input::keyboard::KeyCode>>,
     mut q_primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
-    if !keyboard_input.just_pressed(KeyCode::F) {
+    if !keyboard_input.just_pressed(KeyCode::KeyF) {
         return;
     }
     let mut window = q_primary_window.get_single_mut().unwrap();
