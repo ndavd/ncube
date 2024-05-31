@@ -11,6 +11,11 @@ works by rotating the hyperdimensional vertices and applying a chain of
 perspective projections to them until the 3rd dimension is reached. **Everything
 is generated in real time just from the dimension number.**
 
+> _On December 13th 2023, ncube made it to #4 of Hacker News
+> ([post](https://news.ycombinator.com/item?id=38603342))._
+>
+> ![Hacker News page screenshot](https://raw.githubusercontent.com/ndavd/ncube/main/.github/hackernews.webp)
+
 <div>
   <img align="center" width="200px" src='https://raw.githubusercontent.com/ndavd/ncube/main/.github/Penteract-q4q5.gif' />
   <img align="center" width="200px" src='https://raw.githubusercontent.com/ndavd/ncube/main/.github/Penteract-q1q4-q3q5.gif' />
